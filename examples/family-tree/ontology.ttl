@@ -1,0 +1,15 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix schema: <https://schema.org/> .
+
+schema:sibling a owl:SymmetricProperty ;
+    rdfs:domain schema:Person ;
+    rdfs:range schema:Person .
+
+schema:spouse a owl:SymmetricProperty ;
+    rdfs:domain schema:Person ;
+    rdfs:range schema:Person .
+
+schema:children owl:inverseOf schema:parent ;
+    rdfs:domain schema:Person ;
+    rdfs:range schema:Person .

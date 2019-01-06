@@ -1,0 +1,15 @@
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix schema: <https://schema.org/> .
+
+($p a owl:SymmetricProperty) → (
+    ($s $p $o) st ($s is-not $o) → ($o $p $s) .
+) .
+
+($p a owl:TransitiveProperty) → (
+    ($a $p $b), ($b $p $c) → ($a $p $c) .
+) .
+
+($p owl:inverseOf $q) → ($q owl:inverseOf $p) .
+($p owl:inverseOf $q) → (
+    ($s $q $o) → ($o $p $s) .
+) .
