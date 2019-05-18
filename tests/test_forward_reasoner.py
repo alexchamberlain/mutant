@@ -308,6 +308,52 @@ def test_forward_reasoner_with_child():
 
 @pytest.mark.forward_reasoner
 @pytest.mark.skip
+def test_forward_reasoner_with_children_1():
+    store = InMemoryHexastore()
+    reasoner = ForwardReasoner(store)
+
+    reasoner.insert(CHILDREN, INVERSE_OF, PARENT, 1)
+    reasoner.register_predicate_rule(PARENT, parent_sibling_rule)
+
+    reasoner.insert(A, CHILDREN, C, 3)
+    reasoner.insert(A, CHILDREN, D, 4)
+
+    plot(store, "scratch/test_forward_reasoner_with_child.dot")
+
+    expected_store = InMemoryHexastore()
+    expected_store.insert((PARENT, INVERSE_OF, CHILDREN), INFERRED_FROM, (CHILDREN, INVERSE_OF, PARENT), 1)
+    expected_store.insert(A, CHILDREN, C, 1)
+    expected_store.insert(A, CHILDREN, D, 1)
+    expected_store.insert(B, SPOUSE, A, 1)
+    expected_store.insert(C, PARENT, A, 1)
+    expected_store.insert(C, PARENT, B, 1)
+    expected_store.insert(CHILDREN, INVERSE_OF, PARENT, 1)
+    expected_store.insert(PARENT, INVERSE_OF, CHILDREN, 1)
+    expected_store.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
+
+    node = BlankNode()
+    expected_store.insert(node, TYPE, BAG, 2)
+    expected_store.insert((B, SPOUSE, A), INFERRED_FROM, node, 2)
+    expected_store.insert(node, _li(1), (SPOUSE, TYPE, SYMMETRIC_PROPERTY), 2)
+    expected_store.insert(node, _li(2), (A, SPOUSE, B), 2)
+
+    node = BlankNode()
+    expected_store.insert(node, TYPE, BAG, 2)
+    expected_store.insert((C, PARENT, A), INFERRED_FROM, node, 2)
+    expected_store.insert(node, _li(1), (PARENT, INVERSE_OF, CHILDREN), 2)
+    expected_store.insert(node, _li(2), (A, CHILDREN, C), 2)
+
+    node = BlankNode()
+    expected_store.insert(node, TYPE, BAG, 2)
+    expected_store.insert((C, PARENT, B), INFERRED_FROM, node, 2)
+    expected_store.insert(node, _li(1), (PARENT, INVERSE_OF, CHILDREN), 2)
+    expected_store.insert(node, _li(2), (B, CHILDREN, C), 2)
+
+    assert_equivalent(store, expected_store)
+
+
+@pytest.mark.forward_reasoner
+@pytest.mark.skip
 def test_forward_reasoner_with_children():
     store = InMemoryHexastore()
     reasoner = ForwardReasoner(store)
