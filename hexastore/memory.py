@@ -45,11 +45,11 @@ class InMemoryHexastore:
 
         return None
 
-    def insert(self, s: Term, p: Term, o: Term, valid_from: int) -> None:
+    def insert(self, s: Term, p: Term, o: Term, valid_from: int) -> bool:
         if o in self.spo[s][p]:
             status = self.spo[s][p][o]
             if status.inserted:
-                return
+                return False
         else:
             status = TripleStatus([])
 
@@ -64,6 +64,8 @@ class InMemoryHexastore:
         assert p in self.sop[s][o]
         assert s in self.ops[o][p]
         assert o in self.pso[p][s]
+
+        return True
 
     def delete(self, s: Term, p: Term, o: Term, valid_to: int) -> None:
         if p in self.sop[s][o]:

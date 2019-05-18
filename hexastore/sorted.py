@@ -161,9 +161,9 @@ class SortedMapping(MutableOrderedMapping[T, V]):
                 items_current = next(items_iter)
 
                 while True:
-                    if k_current < items_current[0]:
+                    if self._keys.key(k_current) < self._keys.key(items_current[0]):
                         k_current = next(k_iter)
-                    elif k_current > items_current[0]:
+                    elif self._keys.key(k_current) > self._keys.key(items_current[0]):
                         items_current = next(items_iter)
                     else:
                         output.append((k_current, items_current[1]))
@@ -229,10 +229,10 @@ class DefaultSortedMapping(SortedMapping[T, V]):
                 items_current = next(items_iter)
 
                 while True:
-                    if k_current < items_current[0]:
+                    if self._keys.key(k_current) < self._keys.key(items_current[0]):
                         output.append((k_current, self.factory(k_current)))
                         k_current = next(k_iter)
-                    elif k_current > items_current[0]:
+                    elif self._keys.key(k_current) > self._keys.key(items_current[0]):
                         items_current = next(items_iter)
                     else:
                         output.append((k_current, items_current[1]))

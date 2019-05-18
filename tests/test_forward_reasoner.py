@@ -6,7 +6,7 @@ from hexastore.ast import IRI, BlankNode
 from hexastore.memory import InMemoryHexastore
 from hexastore.model import Key
 from hexastore.forward_reasoner import ForwardReasoner
-from hexastore.util import triple_map
+from hexastore.util import triple_map, plot
 
 A = IRI("http://example.com/A")
 B = IRI("http://example.com/B")
@@ -34,16 +34,17 @@ RANGE = IRI("http://www.w3.org/2000/01/rdf-schema#range")
 SUBCLASS_OF = IRI("http://www.w3.org/2000/01/rdf-schema#subclassOf")
 SUBPROPERTY_OF = IRI("http://www.w3.org/2000/01/rdf-schema#subpropertyOf")
 TRANSITIVE_PROPERTY = IRI("http://example.com/transitive-property")
+MEMBER = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#member")
 
 
-def parent_sibling_rule(store, s, p, o, version, insert):
+def parent_sibling_rule(store, s, p, o, insert):
     inferred_from = (s, p, o)
     for s_, status in store.ops[o][p].items():
         if not status.inserted or s == s_:
             continue
 
-        insert((s, SIBLING, s_), [inferred_from, (s_, p, o)], version)
-        insert((s_, SIBLING, s), [inferred_from, (s_, p, o)], version)
+        insert((s, SIBLING, s_), [inferred_from, (s_, p, o)])
+        insert((s_, SIBLING, s), [inferred_from, (s_, p, o)])
 
 
 @pytest.mark.forward_reasoner
@@ -64,8 +65,6 @@ def test_forward_reasoner_subclass_of():
     expected_store.insert((A, TYPE, THING), INFERRED_FROM, node, 1)
     expected_store.insert(node, _li(1), (PERSON, SUBCLASS_OF, THING), 1)
     expected_store.insert(node, _li(2), (A, TYPE, PERSON), 1)
-
-    assert len(store) == len(expected_store)
 
     assert_equivalent(store, expected_store)
 
@@ -92,8 +91,6 @@ def test_forward_reasoner_transitive_of():
     expected_store.insert(node, _li(2), (PERSON, SUBCLASS_OF, THING), 1)
     expected_store.insert(node, _li(3), (THING, SUBCLASS_OF, OWL_THING), 1)
 
-    assert len(store) == len(expected_store)
-
     assert_equivalent(store, expected_store)
 
 
@@ -118,8 +115,6 @@ def test_forward_reasoner_transitive_of_reverse():
     expected_store.insert(node, _li(1), (SUBCLASS_OF, TYPE, TRANSITIVE_PROPERTY), 1)
     expected_store.insert(node, _li(2), (PERSON, SUBCLASS_OF, THING), 1)
     expected_store.insert(node, _li(3), (THING, SUBCLASS_OF, OWL_THING), 1)
-
-    assert len(store) == len(expected_store)
 
     assert_equivalent(store, expected_store)
 
@@ -275,6 +270,8 @@ def test_forward_reasoner_with_child():
     reasoner.insert(A, SPOUSE, B, 2)
     reasoner.insert(C, PARENT, A, 3)
     reasoner.insert(C, PARENT, B, 4)
+
+    plot(store, "scratch/test_forward_reasoner_with_child.dot")
 
     expected_store = InMemoryHexastore()
     expected_store.insert((PARENT, INVERSE_OF, CHILDREN), INFERRED_FROM, (CHILDREN, INVERSE_OF, PARENT), 1)
@@ -523,8 +520,6 @@ def test_forward_reasoner_with_children_and_delete():
     expected_store.insert(node, _li(1), (CHILDREN, INVERSE_OF, PARENT), 2)
     expected_store.insert(node, _li(2), (D, PARENT, B), 2)
 
-    assert len(store) == len(expected_store)
-
     assert_equivalent(store, expected_store)
 
 
@@ -615,6 +610,7 @@ class _BlankNodeMap:
 
 
 def _li(n: int):
+    return MEMBER
     return IRI(f"http://www.w3.org/1999/02/22-rdf-syntax-ns#_{n}")
 
 
