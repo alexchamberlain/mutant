@@ -1,0 +1,49 @@
+document: preamble rules
+
+preamble: prefix*
+
+prefix: "@prefix" PN_PREFIX? ":" iriref "."
+
+rules: rule+
+
+rule: body _IMPLIES head "."
+
+body: triple ("," triple)*
+head: triple ("," triple)*
+
+triple: "(" _term_or_var predicate _term_or_var ")"
+
+predicate: _term
+    | "a" -> a
+    | "∈" -> member_of
+
+_term_or_var: _term | var
+_term: _iri
+
+_iri: iriref | prefixed_name
+prefixed_name: PN_PREFIX? ":" PN_LOCAL
+
+var: "$" VARNAME
+
+iriref: "<" IRICHAR? ">"
+
+IRICHAR:  ("A" .. "Z" | "a" .. "z" | "0" .. "9" | ":" | "/" | "#" | "." | UCHAR)+
+VARNAME: PN_CHARS+
+
+// IRIREF: "<" ("A" .. "Z" | "a" .. "z" | "0" .. "9" | ":" | "/" | "#" | "." | UCHAR)* ">" // "<" (/[^#x00-#x20<>"{}|^`\\]/ | UCHAR)* ">"
+PNAME_NS: PN_PREFIX? ":"
+PNAME_LN: PNAME_NS PN_LOCAL
+UCHAR: "\\u" HEX HEX HEX HEX | "\\U" HEX HEX HEX HEX HEX HEX HEX HEX
+PN_CHARS_BASE: "A" .. "Z" | "a" .. "z" // /[A-Z] | [a-z] | [#x00C0-#x00D6] | [#x00D8-#x00F6] | [#x00F8-#x02FF] | [#x0370-#x037D] | [#x037F-#x1FFF] | [#x200C-#x200D] | [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] | [#xF900-#xFDCF] | [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]/
+PN_CHARS_U: PN_CHARS_BASE | "_"
+PN_CHARS: PN_CHARS_U | "-" | "0" .. "9" // | /#x00B7/ | /[#x0300-#x036F]/ | /[#x203F-#x2040]/
+PN_PREFIX: PN_CHARS_BASE ((PN_CHARS | ".")* PN_CHARS)?
+PN_LOCAL: (PN_CHARS_U | ":" | "0" .. "9" | PLX) ((PN_CHARS | "." | ":" | PLX)* (PN_CHARS | ":" | PLX))?
+PLX: PERCENT | PN_LOCAL_ESC
+PERCENT: "%" HEX HEX
+HEX: "A" .. "F" | "a" .. "f" | "0" .. "9"
+PN_LOCAL_ESC: "\\" ("_" | "~" | "." | "-" | "!" | "$" | "&" | "\"" | "(" | ")" | "*" | "+" | "," | ";" | "=" | "/" | "?" | "#" | "@" | "%")
+_IMPLIES: "->" | "→"
+
+%import common.WS
+%ignore WS
