@@ -1,3 +1,4 @@
+import decimal
 import enum
 import functools
 from typing import List, Optional
@@ -43,6 +44,31 @@ class IRI:
             return False
 
         return self.value == other.value
+
+
+@functools.total_ordering
+@attr.s(frozen=True, cmp=False, hash=True)
+class LangTaggedString:
+    value: str = attr.ib()
+    language: str = attr.ib()
+
+    def __str__(self) -> str:
+        return f'"{self.value}"@{self.language}'
+
+    def __lt__(self, other: object) -> bool:
+        if isinstance(other, LangTaggedString):
+            if self.value == other.value:
+                return self.language < other.language
+
+            return self.value < other.value
+        else:
+            return NotImplemented
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, LangTaggedString):
+            return False
+
+        return self.value == other.value and self.language == other.language
 
 
 @functools.total_ordering
@@ -104,4 +130,4 @@ class TripleStatusItem:
 
 
 #  TODO: Verify the following order
-TYPE_ORDER = [tuple, BlankNode, IRI, str, int, Variable, type(None)]
+TYPE_ORDER = [tuple, BlankNode, IRI, str, LangTaggedString, int, decimal.Decimal, float, Variable, type(None)]
