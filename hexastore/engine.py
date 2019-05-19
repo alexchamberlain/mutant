@@ -43,9 +43,13 @@ class VariableWithOrderInformation:
         return Variable(self.variable_name)
 
 
-def execute(store: Hexastore, patterns: Sequence[TriplePattern], order_by: List[OrderCondition]) -> Sequence[Solution]:
+def execute(
+    store: Hexastore, patterns: Sequence[TriplePattern], order_by: List[OrderCondition], bindings: Solution = None
+) -> Sequence[Solution]:
+    if bindings is None:
+        bindings = Solution({}, order_by)
     engine_ = _Engine(store, order_by)
-    return engine_(patterns)
+    return engine_(patterns, bindings)
 
 
 class _Engine:
@@ -63,13 +67,13 @@ class _Engine:
 
         return term
 
-    def __call__(self, patterns: Sequence[TriplePattern]) -> Sequence[Solution]:
+    def __call__(self, patterns: Sequence[TriplePattern], bindings: Solution) -> Sequence[Solution]:
         if not patterns:
             return [Solution({}, self.order_by)]
 
         patterns = sorted(patterns, key=_count_variables)
 
-        solutions = list(self._match(patterns[0]))
+        solutions = list(map(_Merge(bindings), self._match(patterns[0])))
 
         for triple_pattern in patterns[1:]:
             solutions = list(self._process_pattern(triple_pattern, solutions))

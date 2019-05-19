@@ -14,6 +14,7 @@ C = IRI("http://example.com/C")
 D = IRI("http://example.com/D")
 
 SIBLING = IRI("https://schema.org/sibling")
+PARENT = IRI("https://schema.org/parent")
 INFERRED_FROM = IRI("https://example.com/inferred_from")
 
 
@@ -101,7 +102,7 @@ def test_parent_sibling_2():
 
 
 @pytest.mark.generic_rule
-def test_sibling_symmetric_parse_and_register():
+def test_sibling_symmetric_parse_and_register_1():
     document = """
         @prefix schema: <https://schema.org/> .
 
@@ -116,8 +117,49 @@ def test_sibling_symmetric_parse_and_register():
 
     reasoner.insert(A, SIBLING, B, 1)
 
-    assert list(store.triples()) == [
-        ((B, SIBLING, A), INFERRED_FROM, (A, SIBLING, B)),
-        (A, SIBLING, B),
-        (B, SIBLING, A),
-    ]
+    assert (A, SIBLING, B) in store
+    assert (B, SIBLING, A) in store
+
+
+@pytest.mark.generic_rule
+def test_sibling_symmetric_parse_and_register_many():
+    document = """
+        @prefix schema: <https://schema.org/> .
+
+        ($child1 schema:parent $parent), ($child2 schema:parent $parent)
+            → ($child1 schema:sibling $child2) .
+    """
+
+    store = InMemoryHexastore()
+    reasoner = ForwardReasoner(store)
+
+    generic_rule.parse_and_register(document, reasoner)
+
+    reasoner.insert(A, PARENT, C, 1)
+    reasoner.insert(B, PARENT, C, 1)
+
+    assert (A, SIBLING, B) in store
+    assert (B, SIBLING, A) in store
+
+
+@pytest.mark.generic_rule
+def test_sibling_symmetric_parse_and_register_combined():
+    document = """
+        @prefix schema: <https://schema.org/> .
+
+        ($child1 schema:sibling $child2)
+            → ($child2 schema:sibling $child1) .
+        ($child1 schema:parent $parent), ($child2 schema:parent $parent)
+            → ($child1 schema:sibling $child2) .
+    """
+
+    store = InMemoryHexastore()
+    reasoner = ForwardReasoner(store)
+
+    generic_rule.parse_and_register(document, reasoner)
+
+    reasoner.insert(A, PARENT, C, 1)
+    reasoner.insert(B, PARENT, C, 1)
+
+    assert (A, SIBLING, B) in store
+    assert (B, SIBLING, A) in store

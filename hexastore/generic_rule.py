@@ -5,6 +5,7 @@ from typing import List, Union, Tuple
 import attr
 from lark import Lark, Transformer, v_args
 
+from . import engine
 from .ast import IRI, Variable
 from .model import Solution
 from .namespace import Namespace
@@ -28,7 +29,9 @@ def parse_and_register(document, store):
             pattern = r.body[0]
             store.register_predicate_rule(pattern[1], GeneralRule1(pattern[0], pattern[2], r.head))
         else:
-            assert False, "body too long"
+            for i, pattern in enumerate(r.body):
+                rest = [p for j, p in enumerate(r.body) if i != j]
+                store.register_predicate_rule(pattern[1], GeneralRuleMany(pattern[0], pattern[2], rest, r.head))
 
 
 def parse(document):
@@ -58,6 +61,30 @@ class GeneralRule1:
                     triple = _resolve(triple_pattern, solution)
                     logger.debug(f"triple {triple}")
                     insert(triple, (s, p, o))
+
+
+class GeneralRuleMany:
+    def __init__(self, s: Variable, o: Variable, rest: List[TriplePattern], head: List[TriplePattern]):
+        self._s = s
+        self._o = o
+        self._rest = rest
+        self._head = head
+
+    def __call__(self, store, s, p, o, insert):
+        for s, os in store.pso[p].items():
+            for o, status in os.items():
+                if not status.inserted:
+                    continue
+
+                solution = Solution({self._s: s, self._o: o}, [])
+
+                patterns = [_resolve(triple_pattern, solution) for triple_pattern in self._rest]
+                solutions = engine.execute(store, patterns, [], solution)
+
+                for solution in solutions:
+                    for triple_pattern in self._head:
+                        triple = _resolve(triple_pattern, solution)
+                        insert(triple, (s, p, o))
 
 
 def _resolve(triple_pattern, solution):
