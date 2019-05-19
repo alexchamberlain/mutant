@@ -5,6 +5,16 @@ import pytest
 
 from hexastore import generic_rule
 from hexastore.ast import Variable, IRI
+from hexastore.memory import InMemoryHexastore
+from hexastore.forward_reasoner import ForwardReasoner
+
+A = IRI("http://example.com/A")
+B = IRI("http://example.com/B")
+C = IRI("http://example.com/C")
+D = IRI("http://example.com/D")
+
+SIBLING = IRI("https://schema.org/sibling")
+INFERRED_FROM = IRI("https://example.com/inferred_from")
 
 
 def make_parse(start):
@@ -87,4 +97,27 @@ def test_parent_sibling_2():
             ],
             [(Variable("child1"), IRI("https://schema.org/sibling"), Variable("child2"))],
         )
+    ]
+
+
+@pytest.mark.generic_rule
+def test_sibling_symmetric_parse_and_register():
+    document = """
+        @prefix schema: <https://schema.org/> .
+
+        ($child1 schema:sibling $child2)
+            → ($child2 schema:sibling $child1) .
+    """
+
+    store = InMemoryHexastore()
+    reasoner = ForwardReasoner(store)
+
+    generic_rule.parse_and_register(document, reasoner)
+
+    reasoner.insert(A, SIBLING, B, 1)
+
+    assert list(store.triples()) == [
+        ((B, SIBLING, A), INFERRED_FROM, (A, SIBLING, B)),
+        (A, SIBLING, B),
+        (B, SIBLING, A),
     ]

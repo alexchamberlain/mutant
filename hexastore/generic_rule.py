@@ -1,15 +1,34 @@
+import logging
 import pkgutil
+from typing import List, Union, Tuple
 
 import attr
 from lark import Lark, Transformer, v_args
 
 from .ast import IRI, Variable
+from .model import Solution
 from .namespace import Namespace
+
+logger = logging.getLogger(__name__)
 
 MEMBER = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#member")
 TYPE = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
 
+TermPattern = Union[IRI, str, Variable]
+TriplePattern = Tuple[TermPattern, TermPattern, TermPattern]
+
 rule_parser = Lark(pkgutil.get_data("hexastore", "lark/rule.lark").decode(), start="document", parser="lalr")
+
+
+def parse_and_register(document, store):
+    rules = parse(document)
+
+    for r in rules:
+        if len(r.body) == 1:
+            pattern = r.body[0]
+            store.register_predicate_rule(pattern[1], GeneralRule1(pattern[0], pattern[2], r.head))
+        else:
+            assert False, "body too long"
 
 
 def parse(document):
@@ -19,6 +38,38 @@ def parse(document):
 
     transformer = _Transformer()
     return transformer.transform(tree)
+
+
+class GeneralRule1:
+    def __init__(self, s: Variable, o: Variable, head: List[TriplePattern]):
+        self._s = s
+        self._o = o
+        self._head = head
+
+    def __call__(self, store, s, p, o, insert):
+        for s, os in store.pso[p].items():
+            for o, status in os.items():
+                if not status.inserted:
+                    continue
+
+                solution = Solution({self._s: s, self._o: o}, [])
+
+                for triple_pattern in self._head:
+                    triple = _resolve(triple_pattern, solution)
+                    logger.debug(f"triple {triple}")
+                    insert(triple, (s, p, o))
+
+
+def _resolve(triple_pattern, solution):
+    logger.debug(f"_resolve {triple_pattern} {solution}")
+    return (_s(triple_pattern[0], solution), _s(triple_pattern[1], solution), _s(triple_pattern[2], solution))
+
+
+def _s(term: TermPattern, solution: Solution) -> TermPattern:
+    if isinstance(term, Variable):
+        return solution.get(term, term)
+
+    return term
 
 
 @attr.s
