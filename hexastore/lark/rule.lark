@@ -6,14 +6,15 @@ prefix: "@prefix" PN_PREFIX? ":" iriref "."
 
 rules: rule+
 
-rule: body _IMPLIES head "."
+rule: body _IMPLIES head "." -> terminating_rule
+    | body _IMPLIES "(" rules ")" "." -> recursive_rule
 
 body: triple ("," triple)*
 head: triple ("," triple)*
 
 triple: "(" _term_or_var predicate _term_or_var ")"
 
-predicate: _term
+predicate: _term_or_var
     | "a" -> a
     | "∈" -> member_of
 

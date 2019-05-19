@@ -102,6 +102,37 @@ def test_parent_sibling_2():
 
 
 @pytest.mark.generic_rule
+def test_symmetric():
+    document = """
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix schema: <https://schema.org/> .
+
+        ($p a owl:SymmetricProperty) → (
+            ($s $p $o) → ($o $p $s) .
+        ) .
+    """
+
+    rules = generic_rule.parse(document)
+
+    assert rules == [
+        generic_rule.Rule(
+            [
+                (
+                    Variable("p"),
+                    IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+                    IRI("http://www.w3.org/2002/07/owl#SymmetricProperty"),
+                )
+            ],
+            [
+                generic_rule.Rule(
+                    [(Variable("s"), Variable("p"), Variable("o"))], [(Variable("o"), Variable("p"), Variable("s"))]
+                )
+            ],
+        )
+    ]
+
+
+@pytest.mark.generic_rule
 def test_sibling_symmetric_parse_and_register_1():
     document = """
         @prefix schema: <https://schema.org/> .

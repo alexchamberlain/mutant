@@ -111,7 +111,7 @@ class _Transformer(Transformer):
 
     @v_args(inline=True)
     def document(self, preamble, rules):
-        return rules.children
+        return rules
 
     @v_args(inline=True)
     def prefix(self, prefix, iri):
@@ -119,9 +119,20 @@ class _Transformer(Transformer):
         self._namespaces[prefix] = n
         return n
 
+    def rules(self, children):
+        return children
+
     @v_args(inline=True)
-    def rule(self, body, head):
+    def rule(self, r):
+        return r
+
+    @v_args(inline=True)
+    def terminating_rule(self, body, head):
         return Rule(body.children, head.children)
+
+    @v_args(inline=True)
+    def recursive_rule(self, body, rule):
+        return Rule(body.children, rule)
 
     @v_args(inline=True)
     def triple(self, s, p, o):
