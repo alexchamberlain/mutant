@@ -1,0 +1,7 @@
+@prefix schema: <https://schema.org/> .
+
+($child1 schema:sibling $child2)
+    → ($child2 schema:sibling $child1) .
+
+($person1 schema:spouse $person2)
+    → ($person2 schema:spouse $person1) .

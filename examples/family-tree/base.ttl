@@ -1,0 +1,13 @@
+@prefix schema: <https://schema.org/> .
+@prefix example: <https://example.org/> .
+
+example:harry schema:name "Harry Potter" ;
+    schema:spouse example:ginny .
+
+example:ginny schema:name "Ginny Weasley" ;
+    schema:sibling example:ron .
+
+example:ron schema:name "Ron Weasley" ;
+    schema:spouse example:hermione .
+
+example:hermione schema:name "Hermione Granger" .

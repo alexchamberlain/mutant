@@ -37,8 +37,6 @@ def parse_and_register(document, store):
 def parse(document):
     tree = rule_parser.parse(document)
 
-    print(tree.pretty())
-
     transformer = _Transformer()
     return transformer.transform(tree)
 
