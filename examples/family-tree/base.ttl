@@ -4,10 +4,22 @@
 example:harry schema:name "Harry Potter" ;
     schema:spouse example:ginny .
 
-example:ginny schema:name "Ginny Weasley" ;
-    schema:sibling example:ron .
+example:ginny schema:name "Ginny Weasley" .
 
 example:ron schema:name "Ron Weasley" ;
     schema:spouse example:hermione .
 
 example:hermione schema:name "Hermione Granger" .
+
+example:molly schema:name "Molly Weasley" ;
+    schema:children example:ron, example:ginny, example:fred, example:george, example:bill, example:percy, example:charlie .
+
+example:arthur schema:name "Arthur Weasley" ;
+    schema:spouse example:molly ;
+    schema:children example:ron, example:ginny, example:fred, example:george, example:bill, example:percy, example:charlie .
+
+example:fred schema:name "Fred Weasley" .
+example:george schema:name "George Weasley" .
+example:bill schema:name "Bill Weasley" .
+example:percy schema:name "Percy Weasley" .
+example:charlie schema:name "Charlie Weasley" .

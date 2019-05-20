@@ -29,7 +29,7 @@ class _Serialiser:
 
     def _serialise_predicate_object_list(self, p, os):
         objs = [self._terms[o] for o, status in os.items() if status.inserted]
-        o = ",".join(objs)
+        o = ", ".join(objs)
 
         return f"{self._terms[p]} {o}"
 
