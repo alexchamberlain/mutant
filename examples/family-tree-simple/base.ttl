@@ -1,0 +1,9 @@
+@prefix schema: <https://schema.org/> .
+@prefix example: <https://example.org/> .
+
+example:pebbles schema:name "Pebbles Flintstone" .
+example:bamn-bamn schema:name "Bamm-Bamm Rubble" .
+example:roxy schema:name "Roxy Rubble" ;
+    schema:parent example:pebbles, example:bamn-bamn .
+example:chip schema:name "Chip Rubble" ;
+    schema:parent example:pebbles, example:bamn-bamn .

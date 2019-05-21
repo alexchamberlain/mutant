@@ -1,0 +1,4 @@
+@prefix schema: <https://schema.org/> .
+
+($child1 schema:parent $parent), ($child2 schema:parent $parent)
+    → ($child1 schema:sibling $child2) .

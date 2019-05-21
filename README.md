@@ -1,35 +1,97 @@
-# Cerberus
+# Mutant
 
-A PoC Deductive Triple Store, with an aim to be a Distributed Deductive Rewindable Triple Store.
+A forward reasoning logic language for RDF.
 
-## What is a Distributed Deductive Rewindable Triple Store?
+## Example
 
-* **Triple Store** A triple store is a very interesting model for data storage, contraposing RDBMS, column stores, object stores, document stores etc. It models data based on 3 terms: subject-predicate-object. "Alex a Person", "Alex worksFor Bloomberg" etc. It can be seen as a storage form of RDF, though it need not be limited to RDF. Furthermore, it can easily be extended with triples referencing other triples for various use cases. The storage modules are based on a paper proposing a bespoke storage format for Triple Stores called [Hexastore: Sextuple Indexing for Semantic Web Data Management][1].
-* **Distributed** Most modern data solutions are being built distributed from the ground up - examples include ZooKeeper, CockroachDB, Cassandra etc. As far as I can tell, there are very few options in this space for Triple Stores, and where there are, they are either tacked onto the side or a commercial solution. This PoC is _not_ distributed, but does include a Write-Ahead Log integral to its design, so it should be feasible to extend this to a distributed system via the Raft Protocol or similar.
-* **Deductive** Given the simple nature of triple stores, there have been several attempts at mapping datalog to the format, which allows you to deduce triples based on other triples. For example, "Alex worksFor Bloomberg" implies that "Alex a Person" and "Bloomberg a Organisation" (based on the [`domain`][2] and [`range`][3] of the predicate [`worksFor`][4]). In general, these are called Reasoners, and vary from very simple and inflexible to the utterly complex and theoretical. We're aiming for a compromise in the middle based on a semi-naiive forward reasoning algorithm, based loosely on reading about how Datalog systems are implemented.
-* **Rewindable** It's relatively easy to track which version added a triple and which version removed it. Assuming that this information is never removed, it is possible to "rewind" history within the database and understand what it looked like at any previous version. If the timestamp of each version is then tracked, it is also possible to rewind history to any point in time too. In this PoC, that is the limit of the implementation, but it is envisaged that tools to merge versions, simplify history, remove subjects completely from history etc could be developed to answer different use cases.
+Let us suppose we have the following Turtle file:
 
-## Why Python?
+```
+@prefix schema: <https://schema.org/> .
+@prefix example: <https://example.org/> .
 
-To get out ahead of this one, Python was used simply because it's the language I'm most comfortable with and productive in. In this PoC, I wanted to concentrate on the datastructures in use, rather than top notch performance. That being said, in informal benchmarks, using PyPy with various stages of prototype did produce some very impressive results. It also has some amazing patterns, such as the Sequence and Mapping Protocols, that make implementing a Hexastore quite elegant.
+example:pebbles schema:name "Pebbles Flintstone" .
+example:bamn-bamn schema:name "Bamm-Bamm Rubble" .
+example:roxy schema:name "Roxy Rubble" ;
+    schema:parent example:pebbles, example:bamn-bamn .
+example:chip schema:name "Chip Rubble" ;
+    schema:parent example:pebbles, example:bamn-bamn .
+```
 
-## Alternatives
+It's fair to say that based on the above information, Roxy is a sibling of Chip, and vice versa. We can encode that in `mutant` using the following code
 
-This is no where near ready to store real data for long periods of time, and there are several OSS and commercial solutions available, with different trade offs.
+```
+@prefix schema: <https://schema.org/> .
 
-* [AWS Neptune][5]
-* [Blazegraph][6]
-* [Marmotta][7]
-* [OpenLink Virtuoso][8]
+($child1 schema:parent $parent), ($child2 schema:parent $parent)
+    → ($child1 schema:sibling $child2) .
+```
 
-There are also a fair number of Graph Databases in this space, including Neo4J and dgraph.
+You can run this by using the following command:
 
+    python mutant.py reason -n example https://example.org/ -n schema https://schema.org/ examples/family-tree-simple/rules.mtt examples/family-tree-simple/base.ttl -
+
+Which will produce the following output:
+
+```
+@prefix example: <https://example.org/> .
+@prefix schema: <https://schema.org/> .
+
+example:bamn-bamn schema:name "Bamm-Bamm Rubble" .
+
+example:chip schema:name "Chip Rubble" ;
+    schema:parent example:bamn-bamn, example:pebbles ;
+    schema:sibling example:chip, example:roxy .
+
+example:pebbles schema:name "Pebbles Flintstone" .
+
+example:roxy schema:name "Roxy Rubble" ;
+    schema:parent example:bamn-bamn, example:pebbles ;
+    schema:sibling example:chip, example:roxy .
+```
+
+A more complex example with symmetric and inverse properties (`schema:spouse` and `schema:children`) is provided in `examples/family-tree`.
+
+## Technology
+
+`mutant` is implemented as a single Python package `hexastore`, which has the following levelised structure:
+
+1. `ast`, `bisect`
+2. `typing`, `wal`, `turtle_serialiser`, `namespace`
+3. `model`, `turtle`, `sorted`
+4. `util`, `memory`, `engine`, `forward_reasoner`
+5. `memorywal`, `generic_rule`
+
+`mutant` is a proof of concept, and therefore, the modules aren't necessarily complete or completely coherant. For example, `memory` has support for blank nodes and reified statements, but the turtle serialiser would break miserably if you gave it a blank node.
+
+### `memory`: In Memory Hexastore
+
+`hexastore.memory` implements an in-memory hexastore, based on a paper entitled [Hexastore: Sextuple Indexing for Semantic Web Data Management][1]. It heavily relies on the `sorted` module, which implements a sorted list, sorted mapping and a default variant thereof. This makes the hexastore implement quite simple and succinct. The hexastore structure has been extended to support reified statements, versioned history and inserted/deleted statements.
+
+### `engine`: Pattern matching engine
+
+`hexastore.engine` implements a basic pattern matching engine over the hexastore interface. It's vaguely based on Basic Graph Patterns from SPARQL, as it was original intended to be developed into a SPARQL engine, but it's not very close to that yet.
+
+### `forward_reasoner`: A semi-naive forward reasoner
+
+`hexastore.forward_reasoner` implements a semi-naive forward reasoner for RDF, based on ideas from [Datalog][2]. "semi-naive" simply means that during rule iteration, you only consider triples that have been added in the previous iteration. The forward reasoner records how a triple was found, which allows us to delete triples efficiently.
+
+#### Limitations/TODO/Caveats/Warnings
+
+1. [ ] Remove rule implementations and replace them by `mutant` language coded rules.
+2. [ ] Rules need to be loaded _before_ the triples at the moment to work; this isn't good enough for a realistic system.
+
+### `generic_rule`: `mutant` language parser
+
+The forward reasoner ~~doesn't~~ shouldn't know anything about particular rules; it just implements the forward reasoning engine. The rules themselves are written in a DSL, which simplifies understanding them considerably. `hexastore.generic_rule` implements the parser and adapts the AST into an executable rule for the forward reasoner.
+
+### `turtle`/`turtle_serialiser`: Basic parser/serialiser for turtle
+
+We need to read and write from some format; Turtle is both readable and simple enough to write a parser in a couple of hours. The parser and serialiser are good enough for the examples in the repo; in particular, blank node support is not complete.
+
+## Why Python?
+
+To get out ahead of this one, Python was used simply because it's the language I'm most comfortable with and productive in. In this PoC, I wanted to concentrate on the datastructures in use, rather than top notch performance. It also has some amazing patterns, such as the Sequence and Mapping Protocols, that make implementing a Hexastore quite elegant.
 
 [1]: http://www.vldb.org/pvldb/1/1453965.pdf
-[2]: https://www.w3.org/TR/rdf-schema/#ch_domain
-[3]: https://www.w3.org/TR/rdf-schema/#ch_range
-[4]: https://schema.org/worksFor
-[5]: https://aws.amazon.com/neptune/
-[6]: https://www.blazegraph.com/
-[7]: http://marmotta.apache.org/
-[8]: https://virtuoso.openlinksw.com/
+[2]: https://en.wikipedia.org/wiki/Datalog

@@ -1,7 +1,7 @@
 import decimal
 import logging
 import pkgutil
-from typing import List, Union, Tuple, Optional, Dict
+from typing import Union, Tuple, Optional, Dict
 
 from lark import Lark, Transformer, v_args
 
