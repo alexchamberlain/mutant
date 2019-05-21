@@ -23,7 +23,7 @@ It's fair to say that based on the above information, Roxy is a sibling of Chip,
 ```
 @prefix schema: <https://schema.org/> .
 
-($child1 schema:parent $parent), ($child2 schema:parent $parent)
+($child1 schema:parent $parent), ($child2 schema:parent $parent) st ($child1 is-not $child2)
     → ($child1 schema:sibling $child2) .
 ```
 
@@ -41,18 +41,16 @@ example:bamn-bamn schema:name "Bamm-Bamm Rubble" .
 
 example:chip schema:name "Chip Rubble" ;
     schema:parent example:bamn-bamn, example:pebbles ;
-    schema:sibling example:chip, example:roxy .
+    schema:sibling example:roxy .
 
 example:pebbles schema:name "Pebbles Flintstone" .
 
 example:roxy schema:name "Roxy Rubble" ;
     schema:parent example:bamn-bamn, example:pebbles ;
-    schema:sibling example:chip, example:roxy .
+    schema:sibling example:chip .
 ```
 
 A more complex example with symmetric and inverse properties (`schema:spouse` and `schema:children`) is provided in `examples/family-tree`.
-
-*It is noted that people shouldn't be siblings of themselves; I have a plan.*
 
 ## Technology
 

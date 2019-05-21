@@ -12,5 +12,5 @@
 ($parent schema:children $child)
     → ($child schema:parent $parent) .
 
-($child1 schema:parent $parent), ($child2 schema:parent $parent)
+($child1 schema:parent $parent), ($child2 schema:parent $parent) st ($child1 is-not $child2)
     → ($child1 schema:sibling $child2) .

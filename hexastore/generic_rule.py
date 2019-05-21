@@ -1,6 +1,6 @@
 import logging
 import pkgutil
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Callable
 
 import attr
 from lark import Lark, Transformer, v_args
@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 MEMBER = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#member")
 TYPE = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
+IS_NOT = IRI("http://example.org/isNot")
 
 TermPattern = Union[IRI, str, Variable]
 TriplePattern = Tuple[TermPattern, TermPattern, TermPattern]
@@ -27,11 +28,13 @@ def parse_and_register(document, store):
     for r in rules:
         if len(r.body) == 1:
             pattern = r.body[0]
-            store.register_predicate_rule(pattern[1], GeneralRule1(pattern[0], pattern[2], r.head))
+            store.register_predicate_rule(pattern[1], GeneralRule1(pattern[0], pattern[2], r.constraints, r.head))
         else:
             for i, pattern in enumerate(r.body):
                 rest = [p for j, p in enumerate(r.body) if i != j]
-                store.register_predicate_rule(pattern[1], GeneralRuleMany(pattern[0], pattern[2], rest, r.head))
+                store.register_predicate_rule(
+                    pattern[1], GeneralRuleMany(pattern[0], pattern[2], rest, r.constraints, r.head)
+                )
 
 
 def parse(document):
@@ -42,9 +45,12 @@ def parse(document):
 
 
 class GeneralRule1:
-    def __init__(self, s: Variable, o: Variable, head: List[TriplePattern]):
+    def __init__(
+        self, s: Variable, o: Variable, constraints: List[Callable[[Solution], bool]], head: List[TriplePattern]
+    ):
         self._s = s
         self._o = o
+        self._constraints = constraints
         self._head = head
 
     def __call__(self, store, s, p, o, insert):
@@ -55,6 +61,15 @@ class GeneralRule1:
 
                 solution = Solution({self._s: s, self._o: o}, [])
 
+                constraints_pass = True
+                for constraint in self._constraints:
+                    if not constraint(solution):
+                        constraints_pass = False
+                        break
+
+                if not constraints_pass:
+                    continue
+
                 for triple_pattern in self._head:
                     triple = _resolve(triple_pattern, solution)
                     logger.debug(f"triple {triple}")
@@ -62,10 +77,18 @@ class GeneralRule1:
 
 
 class GeneralRuleMany:
-    def __init__(self, s: Variable, o: Variable, rest: List[TriplePattern], head: List[TriplePattern]):
+    def __init__(
+        self,
+        s: Variable,
+        o: Variable,
+        rest: List[TriplePattern],
+        constraints: List[Callable[[Solution], bool]],
+        head: List[TriplePattern],
+    ):
         self._s = s
         self._o = o
         self._rest = rest
+        self._constraints = constraints
         self._head = head
 
     def __call__(self, store, s, p, o, insert):
@@ -80,6 +103,15 @@ class GeneralRuleMany:
                 solutions = engine.execute(store, patterns, [], solution)
 
                 for solution in solutions:
+                    constraints_pass = True
+                    for constraint in self._constraints:
+                        if not constraint(solution):
+                            constraints_pass = False
+                            break
+
+                    if not constraints_pass:
+                        continue
+
                     for triple_pattern in self._head:
                         triple = _resolve(triple_pattern, solution)
                         insert(triple, (s, p, o))
@@ -100,12 +132,28 @@ def _s(term: TermPattern, solution: Solution) -> TermPattern:
 @attr.s
 class Rule:
     body = attr.ib()
+    constraints = attr.ib()
     head = attr.ib()
 
 
+class ConstraintIsNot:
+    def __init__(self, variables):
+        self._variables = variables
+
+    def __eq__(self, other):
+        if not isinstance(other, ConstraintIsNot):
+            return NotImplemented
+
+        return self._variables == other._variables
+
+    def __call__(self, solution):
+        n = len({solution.get(v) for v in self._variables})
+        return n == len(self._variables)
+
+
 class _Transformer(Transformer):
-    def __init__(self):
-        self._namespaces = {}
+    def __init__(self, namespaces=None):
+        self._namespaces = namespaces or {}
 
     @v_args(inline=True)
     def document(self, preamble, rules):
@@ -124,13 +172,14 @@ class _Transformer(Transformer):
     def rule(self, r):
         return r
 
-    @v_args(inline=True)
-    def terminating_rule(self, body, head):
-        return Rule(body.children, head.children)
+    def terminating_rule(self, children):
+        kwargs = {c.data: c.children for c in children}
+        return Rule(kwargs["body"], kwargs.get("constraints", []), kwargs["head"])
 
-    @v_args(inline=True)
-    def recursive_rule(self, body, rule):
-        return Rule(body.children, rule)
+    def recursive_rule(self, children):
+        rule = children.pop()
+        kwargs = {c.data: c.children for c in children}
+        return Rule(kwargs["body"], kwargs.get("constraints", []), rule)
 
     @v_args(inline=True)
     def triple(self, s, p, o):
@@ -160,3 +209,8 @@ class _Transformer(Transformer):
     @v_args(inline=True)
     def member_of(self):
         return MEMBER
+
+    @v_args(inline=True)
+    def constraint(self, variable1, op, variable2):
+        if op.data == "is_not":
+            return ConstraintIsNot([variable1, variable2])

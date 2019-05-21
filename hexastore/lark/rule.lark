@@ -6,17 +6,23 @@ prefix: "@prefix" PN_PREFIX? ":" iriref "."
 
 rules: rule+
 
-rule: body _IMPLIES head "." -> terminating_rule
-    | body _IMPLIES "(" rules ")" "." -> recursive_rule
+rule: body ("st" constraints)? _IMPLIES head "." -> terminating_rule
+    | body ("st" constraints)? _IMPLIES "(" rules ")" "." -> recursive_rule
 
 body: triple ("," triple)*
 head: triple ("," triple)*
 
+constraints: constraint ("," triple)*
+
 triple: "(" _term_or_var predicate _term_or_var ")"
+
+constraint: "(" var constraint_predicate var ")"
 
 predicate: _term_or_var
     | "a" -> a
     | "∈" -> member_of
+
+constraint_predicate: "is-not" -> is_not
 
 _term_or_var: _term | var
 _term: _iri

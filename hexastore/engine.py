@@ -1,4 +1,5 @@
 import functools
+import operator
 from typing import Any, Sequence, Union, Tuple, Iterator, List, TYPE_CHECKING
 
 import attr
@@ -7,6 +8,8 @@ from .ast import Variable, Order, IRI, OrderCondition
 from .model import Solution
 from .typing import Hexastore, Term
 from .util import triple_map
+
+IS_NOT = IRI("http://example.org/isNot")
 
 SUBJECT = 1
 PREDICATE = 2
@@ -120,23 +123,27 @@ class _Engine:
                         if status.inserted:
                             yield dzip(variables_3, (s, p, o), order_by=self.order_by)
         elif isinstance(triple_pattern[1], VariableWithOrderInformation):
-            po = index[triple_pattern[0]]
+            s = triple_pattern[0]
+            po = index[s]
             variables_2 = (triple_pattern[1].to_variable(), triple_pattern[2].to_variable())
             for p, o_list in po.items(order=triple_pattern[1].order_by_direction):
                 for o, status in o_list.items(order=triple_pattern[2].order_by_direction):
                     if status.inserted:
                         yield dzip(variables_2, (p, o), order_by=self.order_by)
         elif isinstance(triple_pattern[2], VariableWithOrderInformation):
-            po = index[triple_pattern[0]]
-            o_list = po[triple_pattern[1]]
+            s = triple_pattern[0]
+            p = triple_pattern[1]
+            po = index[s]
+            o_list = po[p]
             variables_1 = (triple_pattern[2].to_variable(),)
             for o, status in o_list.items(order=triple_pattern[2].order_by_direction):
                 if status.inserted:
                     yield dzip(variables_1, (o,), order_by=self.order_by)
         else:
-            po = index[triple_pattern[0]]
-            o_list = po[triple_pattern[1]]
-            if triple_pattern[2] in o_list and o_list[triple_pattern[2]].inserted:
+            s, p, o = triple_pattern
+            po = index[s]
+            o_list = po[p]
+            if o in o_list and o_list[o].inserted:
                 yield Solution({}, self.order_by)
 
 

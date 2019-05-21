@@ -6,6 +6,7 @@ import pytest
 from hexastore import generic_rule
 from hexastore.ast import Variable, IRI
 from hexastore.memory import InMemoryHexastore
+from hexastore.namespace import Namespace
 from hexastore.forward_reasoner import ForwardReasoner
 
 A = IRI("http://example.com/A")
@@ -18,12 +19,12 @@ PARENT = IRI("https://schema.org/parent")
 INFERRED_FROM = IRI("https://example.com/inferred_from")
 
 
-def make_parse(start):
+def make_parse(start, namespaces=None):
     return Lark(
         pkgutil.get_data("hexastore", "lark/rule.lark").decode(),
         start=start,
         parser="lalr",
-        transformer=generic_rule._Transformer(),
+        transformer=generic_rule._Transformer(namespaces),
     )
 
 
@@ -58,6 +59,26 @@ def test_triple_member():
 
 
 @pytest.mark.generic_rule
+def test_rule_with_constraint():
+    rule_parser = make_parse("rule", {"schema": Namespace("schema", IRI("https://schema.org/"))})
+    rule = rule_parser.parse(
+        """
+            ($child1 schema:parent $parent), ($child2 schema:parent $parent) st ($child1 is-not $child2)
+                → ($child1 schema:sibling $child2) .
+        """
+    )
+
+    assert rule == generic_rule.Rule(
+        [
+            (Variable("child1"), IRI("https://schema.org/parent"), Variable("parent")),
+            (Variable("child2"), IRI("https://schema.org/parent"), Variable("parent")),
+        ],
+        [(generic_rule.ConstraintIsNot([Variable("child1"), Variable("child2")]))],
+        [(Variable("child1"), IRI("https://schema.org/sibling"), Variable("child2"))],
+    )
+
+
+@pytest.mark.generic_rule
 def test_parent_sibling():
     document = """
         @prefix schema: <https://schema.org/> .
@@ -74,6 +95,7 @@ def test_parent_sibling():
                 (Variable("child1"), IRI("https://schema.org/parent"), Variable("parent")),
                 (Variable("child2"), IRI("https://schema.org/parent"), Variable("parent")),
             ],
+            [],
             [(Variable("child1"), IRI("https://schema.org/sibling"), Variable("child2"))],
         )
     ]
@@ -96,6 +118,7 @@ def test_parent_sibling_2():
                 (Variable("child1"), IRI("https://schema.org/parent"), Variable("parent")),
                 (Variable("child2"), IRI("https://schema.org/parent"), Variable("parent")),
             ],
+            [],
             [(Variable("child1"), IRI("https://schema.org/sibling"), Variable("child2"))],
         )
     ]
@@ -123,9 +146,10 @@ def test_symmetric():
                     IRI("http://www.w3.org/2002/07/owl#SymmetricProperty"),
                 )
             ],
+            [],
             [
                 generic_rule.Rule(
-                    [(Variable("s"), Variable("p"), Variable("o"))], [(Variable("o"), Variable("p"), Variable("s"))]
+                    [(Variable("s"), Variable("p"), Variable("o"))], [], [(Variable("o"), Variable("p"), Variable("s"))]
                 )
             ],
         )
@@ -157,7 +181,7 @@ def test_sibling_symmetric_parse_and_register_many():
     document = """
         @prefix schema: <https://schema.org/> .
 
-        ($child1 schema:parent $parent), ($child2 schema:parent $parent)
+        ($child1 schema:parent $parent), ($child2 schema:parent $parent) st ($child1 is-not $child2)
             → ($child1 schema:sibling $child2) .
     """
 
@@ -171,6 +195,7 @@ def test_sibling_symmetric_parse_and_register_many():
 
     assert (A, SIBLING, B) in store
     assert (B, SIBLING, A) in store
+    assert (A, SIBLING, A) not in store
 
 
 @pytest.mark.generic_rule
