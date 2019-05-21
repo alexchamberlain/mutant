@@ -52,6 +52,8 @@ example:roxy schema:name "Roxy Rubble" ;
 
 A more complex example with symmetric and inverse properties (`schema:spouse` and `schema:children`) is provided in `examples/family-tree`.
 
+*It is noted that people shouldn't be siblings of themselves; I have a plan.*
+
 ## Technology
 
 `mutant` is implemented as a single Python package `hexastore`, which has the following levelised structure:
