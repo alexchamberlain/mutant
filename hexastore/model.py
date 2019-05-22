@@ -91,6 +91,9 @@ class Solution:
     def items(self) -> List[Tuple[Variable, Term]]:
         return sorted(self._d.items(), key=lambda x: x[0])
 
+    def variables(self):
+        return self._d.keys()
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Solution):
             return self._d == other._d

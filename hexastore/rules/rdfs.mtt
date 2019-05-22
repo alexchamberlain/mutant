@@ -1,0 +1,17 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+($p rdfs:domain $T) → (
+    ($s $p $o) → ($s a $T) .
+) .
+
+($p rdfs:range $T) → (
+    ($s $p $o) → ($o a $T) .
+) .
+
+($T rdfs:subclassOf $U) → (
+    ($s a $T) → ($s a $U) .
+) .
+
+($p rdfs:subpropertyOf $q) → (
+    ($s $p $o) → ($s $q $o) .
+) .

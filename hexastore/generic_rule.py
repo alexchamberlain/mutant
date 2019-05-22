@@ -9,6 +9,7 @@ from . import engine
 from .ast import IRI, Variable
 from .model import Solution
 from .namespace import Namespace
+from .typing import Triple
 
 logger = logging.getLogger(__name__)
 
@@ -40,19 +41,23 @@ def parse_and_register(document, store):
     rules = parse(document)
 
     for r in rules:
-        _register_rule(r, store)
+        _register_rule(r, store, [])
 
 
-def _register_rule(r, store):
+def _register_rule(r, store, inferred_from):
     logger.debug(f"Registering {r}")
     if len(r.body) == 1:
         pattern = r.body[0]
 
         if isinstance(r, RecursiveRule):
             logger.debug(f"Registering RecursiveRule1")
-            store.register_predicate_rule(pattern[1], RecursiveRule1(pattern[0], pattern[2], r.constraints, r.head))
+            store.register_predicate_rule(
+                pattern[1], RecursiveRule1(pattern[0], pattern[2], r.constraints, r.head, inferred_from), inferred_from
+            )
         else:
-            store.register_predicate_rule(pattern[1], GeneralRule1(pattern[0], pattern[2], r.constraints, r.head))
+            store.register_predicate_rule(
+                pattern[1], GeneralRule1(pattern[0], pattern[2], r.constraints, r.head, inferred_from), inferred_from
+            )
     else:
         for i, pattern in enumerate(r.body):
             rest = [p for j, p in enumerate(r.body) if i != j]
@@ -61,7 +66,9 @@ def _register_rule(r, store):
                 assert False
             else:
                 store.register_predicate_rule(
-                    pattern[1], GeneralRuleMany(pattern[0], pattern[2], rest, r.constraints, r.head)
+                    pattern[1],
+                    GeneralRuleMany(pattern[0], pattern[2], rest, r.constraints, r.head, inferred_from),
+                    inferred_from,
                 )
 
 
@@ -74,12 +81,18 @@ def parse(document):
 
 class GeneralRule1:
     def __init__(
-        self, s: Variable, o: Variable, constraints: List[Callable[[Solution], bool]], head: List[TriplePattern]
+        self,
+        s: Variable,
+        o: Variable,
+        constraints: List[Callable[[Solution], bool]],
+        head: List[TriplePattern],
+        inferred_from: List[Triple],
     ):
         self._s = s
         self._o = o
         self._constraints = constraints
         self._head = head
+        self._inferred_from = inferred_from
 
     def __call__(self, store, s, p, o, insert):
         for s, os in store.pso[p].items():
@@ -87,7 +100,12 @@ class GeneralRule1:
                 if not status.inserted:
                     continue
 
-                solution = Solution({self._s: s, self._o: o}, [])
+                if isinstance(self._o, Variable):
+                    solution = Solution({self._s: s, self._o: o}, [])
+                else:
+                    if o != self._o:
+                        continue
+                    solution = Solution({self._s: s, self._o: o}, [])
 
                 constraints_pass = True
                 for constraint in self._constraints:
@@ -101,15 +119,23 @@ class GeneralRule1:
                 for triple_pattern in self._head:
                     triple = _resolve(triple_pattern, solution)
                     logger.debug(f"triple {triple}")
-                    insert(triple, (s, p, o))
+                    insert(triple, self._inferred_from + [(s, p, o)])
 
 
 class RecursiveRule1:
-    def __init__(self, s: Variable, o: Variable, constraints: List[Callable[[Solution], bool]], head: Rule):
+    def __init__(
+        self,
+        s: Variable,
+        o: Variable,
+        constraints: List[Callable[[Solution], bool]],
+        head: Rule,
+        inferred_from: List[Triple],
+    ):
         self._s = s
         self._o = o
         self._constraints = constraints
         self._head = head
+        self._inferred_from = inferred_from
 
     def __call__(self, store, s, p, o, insert):
         for s, os in store.pso[p].items():
@@ -117,7 +143,12 @@ class RecursiveRule1:
                 if not status.inserted:
                     continue
 
-                solution = Solution({self._s: s, self._o: o}, [])
+                if isinstance(self._o, Variable):
+                    solution = Solution({self._s: s, self._o: o}, [])
+                else:
+                    if o != self._o:
+                        continue
+                    solution = Solution({self._s: s}, [])
 
                 constraints_pass = True
                 for constraint in self._constraints:
@@ -135,7 +166,7 @@ class RecursiveRule1:
                         _resolve_patterns(head.head, solution),
                     )
 
-                    _register_rule(new_rule, store)
+                    _register_rule(new_rule, store, self._inferred_from + [(s, p, o)])
 
 
 class GeneralRuleMany:
@@ -146,12 +177,14 @@ class GeneralRuleMany:
         rest: List[TriplePattern],
         constraints: List[Callable[[Solution], bool]],
         head: List[TriplePattern],
+        inferred_from: List[Triple],
     ):
         self._s = s
         self._o = o
         self._rest = rest
         self._constraints = constraints
         self._head = head
+        self._inferred_from = inferred_from
 
     def __call__(self, store, s, p, o, insert):
         for s, os in store.pso[p].items():
@@ -176,7 +209,7 @@ class GeneralRuleMany:
 
                     for triple_pattern in self._head:
                         triple = _resolve(triple_pattern, solution)
-                        insert(triple, (s, p, o))
+                        insert(triple, self._inferred_from + [(s, p, o)])
 
 
 def _resolve_patterns(patterns, solution):
@@ -185,7 +218,7 @@ def _resolve_patterns(patterns, solution):
 
 def _resolve_constraints(constraints, solution):
     for c in constraints:
-        assert solution.keys().isdisjoint(set(c._variables))
+        assert solution.variables().isdisjoint(set(c._variables))
 
     return constraints
 

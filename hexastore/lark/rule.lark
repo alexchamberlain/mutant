@@ -34,7 +34,7 @@ var: "$" VARNAME
 
 iriref: "<" IRICHAR? ">"
 
-IRICHAR:  ("A" .. "Z" | "a" .. "z" | "0" .. "9" | ":" | "/" | "#" | "." | UCHAR)+
+IRICHAR: (/[^\x00-\x20<>"{}|^`\\]/ | UCHAR)+
 VARNAME: PN_CHARS+
 
 // IRIREF: "<" ("A" .. "Z" | "a" .. "z" | "0" .. "9" | ":" | "/" | "#" | "." | UCHAR)* ">" // "<" (/[^#x00-#x20<>"{}|^`\\]/ | UCHAR)* ">"

@@ -1,8 +1,10 @@
 from collections import defaultdict
 import logging
+from typing import List, Optional
 
 from .ast import IRI, BlankNode
 from .model import Key
+from .typing import Triple
 
 BAG = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#Bag")
 INFERRED_FROM = IRI("https://example.com/inferred_from")
@@ -26,92 +28,6 @@ TRANSITIVE_PROPERTY = IRI("http://example.com/transitive-property")
 logger = logging.getLogger(__name__)
 
 
-class DomainRule:
-    def __init__(self, type_):
-        self._type = type_
-
-    def __call__(self, store, s, p, o, insert):
-        insert((s, TYPE, self._type), [(p, DOMAIN, self._type), (s, p, o)])
-
-    def __eq__(self, other: object):
-        if not isinstance(other, DomainRule):
-            return NotImplemented
-
-        return self._type == other._type
-
-
-class RangeRule:
-    def __init__(self, type_):
-        self._type = type_
-
-    def __call__(self, store, s, p, o, insert):
-        insert((o, TYPE, self._type), [(p, RANGE, self._type), (s, p, o)])
-
-    def __eq__(self, other: object):
-        if not isinstance(other, RangeRule):
-            return NotImplemented
-
-        return self._type == other._type
-
-
-# TODO: Only match this when object is correct
-class SubclassRule:
-    def __init__(self, subclass, superclass):
-        self._subclass = subclass
-        self._superclass = superclass
-
-    def __call__(self, store, s, p, o, insert):
-        if o == self._subclass:
-            insert((s, TYPE, self._superclass), [(self._subclass, SUBCLASS_OF, self._superclass), (s, p, o)])
-
-        def __eq__(self, other: object):
-            if not isinstance(other, SubclassRule):
-                return NotImplemented
-
-            return self._subclass == other._subclass and self._superclass == other._superclass
-
-
-class SubpropertyRule:
-    def __init__(self, superproperty):
-        self._superproperty = superproperty
-
-    def __call__(self, store, s, p, o, insert):
-        insert((s, self._superproperty, o), [(p, SUBPROPERTY_OF, self._superproperty), (s, p, o)])
-
-    def __eq__(self, other: object):
-        if not isinstance(other, SubpropertyRule):
-            return NotImplemented
-
-        return self._superproperty == other._superproperty
-
-
-def symmetric_rule(store, s, p, o, insert):
-    insert((o, p, s), [(p, TYPE, SYMMETRIC_PROPERTY), (s, p, o)])
-
-
-def transitive_rule(store, s, p, o, insert):
-    for s_, status in store.ops[s][p].items():
-        if not status.inserted:
-            continue
-
-        insert((s_, p, o), [(p, TYPE, TRANSITIVE_PROPERTY), (s_, p, s), (s, p, o)])
-
-    for o_, status in store.spo[o][p].items():
-        if not status.inserted:
-            continue
-
-        insert((s, p, o_), [(p, TYPE, TRANSITIVE_PROPERTY), (s, p, o), (o, p, o_)])
-
-
-class InverseRule:
-    def __init__(self, inverse, inferred_from):
-        self._inverse = inverse
-        self.inferred_from = inferred_from
-
-    def __call__(self, store, s, p, o, insert):
-        insert((o, self._inverse, s), [self.inferred_from, (s, p, o)])
-
-
 class ForwardReasoner:
     def __init__(self, store):
         self._store = store
@@ -119,6 +35,7 @@ class ForwardReasoner:
         self._symmetric_properties = set()
         self._inverse_map = {}
         self._predicate_rules = defaultdict(list)
+        self._rule_deletion_map = defaultdict(list)
 
         self.spo = self._store.spo
         self.pos = self._store.pos
@@ -129,12 +46,21 @@ class ForwardReasoner:
 
         self.triples = self._store.triples
 
-    def register_predicate_rule(self, p, callback):
+    def register_predicate_rule(self, p, callback, inferred_from: Optional[List[Triple]] = None):
+        if inferred_from is None:
+            inferred_from = []
+
+        logger.debug(f"Registering predicate rule {p}, {callback}, {inferred_from}")
         self._predicate_rules[p].append(callback)
+
+        if len(inferred_from) == 1:
+            assert isinstance(inferred_from[0], tuple)
+            self._rule_deletion_map[inferred_from[0]].append((p, callback))
+        elif len(inferred_from) > 1:
+            assert False
 
     def insert(self, s, p, o, version):
         logger.debug(f"insert {(s, p, o)}")
-        # inferred_from = (s, p, o)
         self._store.insert(s, p, o, version)
 
         delta = {(s, p, o)}
@@ -144,28 +70,12 @@ class ForwardReasoner:
             logger.debug(f"delta {delta}")
 
             def _insert(triple, inferred_from):
+                print(triple, inferred_from)
                 next_delta.append((triple, inferred_from))
 
             for inferred_from in delta:
                 s, p, o = inferred_from
                 logger.debug(f"inferred_from {inferred_from}")
-
-                if p == TYPE and o == SYMMETRIC_PROPERTY:
-                    self._predicate_rules[s].append(symmetric_rule)
-                elif p == TYPE and o == TRANSITIVE_PROPERTY:
-                    self._predicate_rules[s].append(transitive_rule)
-                elif p == INVERSE_OF:
-                    _insert((o, p, s), inferred_from)
-                    self._predicate_rules[o].append(InverseRule(s, inferred_from))
-                    # self._predicate_rules[o].append(InverseRule(s, inferred_from))
-                elif p == DOMAIN:
-                    self._predicate_rules[s].append(DomainRule(o))
-                elif p == RANGE:
-                    self._predicate_rules[s].append(RangeRule(o))
-                elif p == SUBCLASS_OF:
-                    self._predicate_rules[TYPE].append(SubclassRule(s, o))
-                elif p == SUBPROPERTY_OF:
-                    self._predicate_rules[s].append(SubpropertyRule(o))
 
                 if p in self._predicate_rules:
                     rules = self._predicate_rules[p]
@@ -190,6 +100,8 @@ class ForwardReasoner:
 
         if not isinstance(inferred_from, list):
             self._store.insert(triple, INFERRED_FROM, inferred_from, version)
+        elif len(inferred_from) == 1:
+            self._store.insert(triple, INFERRED_FROM, inferred_from[0], version)
         else:
             inferred_from = sorted(inferred_from, key=Key)
             for node, status in self._store.ops[BAG][TYPE].items():
@@ -213,59 +125,27 @@ class ForwardReasoner:
         return inserted
 
     def _is_circular(self, triple, inferred_from):
-        # logger.debug(f"_is_circular {triple} {inferred_from}")
-
         if not isinstance(inferred_from, list):
             inferred_from = [inferred_from]
 
         for foo in inferred_from:
-
             #  TODO Extend to full circular check
             if (foo, INFERRED_FROM, triple) in self._store:
-                # logger.debug(f"_is_circular True")
                 return True
-            # (
-            #     (triple, INFERRED_FROM, n) in self._store
-            #     and (n, MEMBER, foo) in self._store
-            #     and (n, TYPE, BAG) in self._store
-            # )
 
             for s, status in self._store.ops[triple][MEMBER].items():
                 if not status.inserted:
                     continue
 
-                # logger.debug(f"_is_circular {(foo, INFERRED_FROM, s)}")
                 if (foo, INFERRED_FROM, s) in self._store:
-                    # logger.debug(f"_is_circular True")
                     return True
 
-        # logger.debug(f"_is_circular False")
         return False
 
     def delete(self, s, p, o, version):
-        if p == TYPE and o == SYMMETRIC_PROPERTY:
-            self._predicate_rules[s].remove(symmetric_rule)
-            return
-        elif p == TYPE and o == TRANSITIVE_PROPERTY:
-            self._predicate_rules[s].remove(transitive_rule)
-        elif p == INVERSE_OF:
-            self._predicate_rules[s] = [
-                r for r in self._predicate_rules[s] if not (isinstance(r, InverseRule) and r.inferred_from == (s, p, o))
-            ]
-            self._predicate_rules[o] = [
-                r for r in self._predicate_rules[o] if not (isinstance(r, InverseRule) and r.inferred_from == (s, p, o))
-            ]
-        elif p == DOMAIN:
-            self._predicate_rules[s].remove(DomainRule(o))
-        elif p == RANGE:
-            self._predicate_rules[s].remove(RangeRule(o))
-        elif p == SUBCLASS_OF:
-            self._predicate_rules[TYPE].remove(SubclassRule(s, o))
-        elif p == SUBPROPERTY_OF:
-            self._predicate_rules[s].remove(SubpropertyRule(o))
-
         inferred_from = (s, p, o)
         self._store.delete(*inferred_from, version)
+
         for p, ss in self._store.ops[inferred_from].items():
             for dead_triple, status in ss.items():
                 if not status.inserted:
@@ -288,6 +168,11 @@ class ForwardReasoner:
                             self._store.delete(*t, version)
 
                     _delete_node(self._store, dead_triple, version)
+
+        for p, callback in self._rule_deletion_map[inferred_from]:
+            logger.debug(f"Removing predicate rule {p}, {callback}, {inferred_from}")
+
+            self._predicate_rules[p].remove(callback)
 
 
 def _li(n: int):
