@@ -170,7 +170,7 @@ class ForwardReasoner:
                 if p in self._predicate_rules:
                     rules = self._predicate_rules[p]
                     for r in rules:
-                        r(self._store, s, p, o, _insert)
+                        r(self, s, p, o, _insert)
 
             logger.debug(f"next_delta {next_delta}")
             delta = set()

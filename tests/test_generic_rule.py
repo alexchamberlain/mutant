@@ -16,6 +16,10 @@ D = IRI("http://example.com/D")
 
 SIBLING = IRI("https://schema.org/sibling")
 PARENT = IRI("https://schema.org/parent")
+SPOUSE = IRI("https://schema.org/spouse")
+
+SYMMETRIC_PROPERTY = IRI("http://www.w3.org/2002/07/owl#SymmetricProperty")
+TYPE = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
 INFERRED_FROM = IRI("https://example.com/inferred_from")
 
 
@@ -138,14 +142,8 @@ def test_symmetric():
     rules = generic_rule.parse(document)
 
     assert rules == [
-        generic_rule.Rule(
-            [
-                (
-                    Variable("p"),
-                    IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-                    IRI("http://www.w3.org/2002/07/owl#SymmetricProperty"),
-                )
-            ],
+        generic_rule.RecursiveRule(
+            [(Variable("p"), IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), SYMMETRIC_PROPERTY)],
             [],
             [
                 generic_rule.Rule(
@@ -219,3 +217,25 @@ def test_sibling_symmetric_parse_and_register_combined():
 
     assert (A, SIBLING, B) in store
     assert (B, SIBLING, A) in store
+
+
+@pytest.mark.generic_rule
+def test_symmetric_register():
+    document = """
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix schema: <https://schema.org/> .
+
+        ($p a owl:SymmetricProperty) → (
+            ($s $p $o) → ($o $p $s) .
+        ) .
+    """
+
+    store = InMemoryHexastore()
+    reasoner = ForwardReasoner(store)
+
+    generic_rule.parse_and_register(document, reasoner)
+
+    reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
+    reasoner.insert(A, SPOUSE, B, 1)
+
+    assert (B, SPOUSE, A) in store

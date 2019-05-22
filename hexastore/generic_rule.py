@@ -22,16 +22,44 @@ TriplePattern = Tuple[TermPattern, TermPattern, TermPattern]
 rule_parser = Lark(pkgutil.get_data("hexastore", "lark/rule.lark").decode(), start="document", parser="lalr")
 
 
+@attr.s
+class Rule:
+    body = attr.ib()
+    constraints = attr.ib()
+    head = attr.ib()
+
+
+@attr.s
+class RecursiveRule:
+    body = attr.ib()
+    constraints = attr.ib()
+    head = attr.ib()
+
+
 def parse_and_register(document, store):
     rules = parse(document)
 
     for r in rules:
-        if len(r.body) == 1:
-            pattern = r.body[0]
-            store.register_predicate_rule(pattern[1], GeneralRule1(pattern[0], pattern[2], r.constraints, r.head))
+        _register_rule(r, store)
+
+
+def _register_rule(r, store):
+    logger.debug(f"Registering {r}")
+    if len(r.body) == 1:
+        pattern = r.body[0]
+
+        if isinstance(r, RecursiveRule):
+            logger.debug(f"Registering RecursiveRule1")
+            store.register_predicate_rule(pattern[1], RecursiveRule1(pattern[0], pattern[2], r.constraints, r.head))
         else:
-            for i, pattern in enumerate(r.body):
-                rest = [p for j, p in enumerate(r.body) if i != j]
+            store.register_predicate_rule(pattern[1], GeneralRule1(pattern[0], pattern[2], r.constraints, r.head))
+    else:
+        for i, pattern in enumerate(r.body):
+            rest = [p for j, p in enumerate(r.body) if i != j]
+
+            if isinstance(r, RecursiveRule):
+                assert False
+            else:
                 store.register_predicate_rule(
                     pattern[1], GeneralRuleMany(pattern[0], pattern[2], rest, r.constraints, r.head)
                 )
@@ -76,6 +104,40 @@ class GeneralRule1:
                     insert(triple, (s, p, o))
 
 
+class RecursiveRule1:
+    def __init__(self, s: Variable, o: Variable, constraints: List[Callable[[Solution], bool]], head: Rule):
+        self._s = s
+        self._o = o
+        self._constraints = constraints
+        self._head = head
+
+    def __call__(self, store, s, p, o, insert):
+        for s, os in store.pso[p].items():
+            for o, status in os.items():
+                if not status.inserted:
+                    continue
+
+                solution = Solution({self._s: s, self._o: o}, [])
+
+                constraints_pass = True
+                for constraint in self._constraints:
+                    if not constraint(solution):
+                        constraints_pass = False
+                        break
+
+                if not constraints_pass:
+                    continue
+
+                for head in self._head:
+                    new_rule = Rule(
+                        _resolve_patterns(head.body, solution),
+                        _resolve_constraints(head.constraints, solution),
+                        _resolve_patterns(head.head, solution),
+                    )
+
+                    _register_rule(new_rule, store)
+
+
 class GeneralRuleMany:
     def __init__(
         self,
@@ -117,6 +179,17 @@ class GeneralRuleMany:
                         insert(triple, (s, p, o))
 
 
+def _resolve_patterns(patterns, solution):
+    return [_resolve(p, solution) for p in patterns]
+
+
+def _resolve_constraints(constraints, solution):
+    for c in constraints:
+        assert solution.keys().isdisjoint(set(c._variables))
+
+    return constraints
+
+
 def _resolve(triple_pattern, solution):
     logger.debug(f"_resolve {triple_pattern} {solution}")
     return (_s(triple_pattern[0], solution), _s(triple_pattern[1], solution), _s(triple_pattern[2], solution))
@@ -127,13 +200,6 @@ def _s(term: TermPattern, solution: Solution) -> TermPattern:
         return solution.get(term, term)
 
     return term
-
-
-@attr.s
-class Rule:
-    body = attr.ib()
-    constraints = attr.ib()
-    head = attr.ib()
 
 
 class ConstraintIsNot:
@@ -179,7 +245,7 @@ class _Transformer(Transformer):
     def recursive_rule(self, children):
         rule = children.pop()
         kwargs = {c.data: c.children for c in children}
-        return Rule(kwargs["body"], kwargs.get("constraints", []), rule)
+        return RecursiveRule(kwargs["body"], kwargs.get("constraints", []), rule)
 
     @v_args(inline=True)
     def triple(self, s, p, o):
