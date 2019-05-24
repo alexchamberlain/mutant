@@ -1,4 +1,4 @@
-from .ast import IRI
+from .ast import IRI, BlankNode
 
 
 def serialise(store, fo, namespaces):
@@ -10,7 +10,11 @@ class _Serialiser:
     def __init__(self, store, namespaces):
         self._store = store
         self._namespaces = namespaces
-        self._terms = {t: self._serialise_term(t) for t in store.terms() if not isinstance(t, tuple)}
+        self._terms = {
+            t: self._serialise_term(t)
+            for t in store.terms()
+            if not isinstance(t, tuple) and not isinstance(t, BlankNode)
+        }
 
     def __call__(self, fo):
         for n, i in self._namespaces:
@@ -18,7 +22,7 @@ class _Serialiser:
         fo.write("\n")
 
         for s, po in self._store.spo.items():
-            if isinstance(s, tuple):
+            if isinstance(s, tuple) or isinstance(s, BlankNode):
                 # Skip reified statements
                 continue
 
@@ -43,4 +47,7 @@ class _Serialiser:
         elif isinstance(t, str):
             return f'"{t}"'
         else:
+            import pdb
+
+            pdb.set_trace()
             raise TypeError(f"Unknown type {type(t)} ({t})")

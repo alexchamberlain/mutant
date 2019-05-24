@@ -2,4 +2,6 @@
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix schema: <https://schema.org/> .
 
-
+schema:sibling a owl:SymmetricProperty .
+schema:spouse a owl:SymmetricProperty .
+schema:children owl:inverseOf schema:parent .

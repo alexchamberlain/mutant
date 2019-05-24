@@ -6,7 +6,8 @@ import click
 from hexastore import generic_rule, turtle, turtle_serialiser
 from hexastore.ast import IRI
 from hexastore.memory import InMemoryHexastore
-from hexastore.forward_reasoner import ForwardReasoner
+from hexastore.default_forward_reasoner import default_forward_reasoner
+from hexastore.util import plot
 
 
 @click.group()
@@ -20,7 +21,7 @@ def cli():
 @click.argument("output", nargs=1)
 def reason(namespace, filenames, output):
     store = InMemoryHexastore()
-    reasoner = ForwardReasoner(store)
+    reasoner = default_forward_reasoner(store)
 
     for filename in filenames:
         if filename.endswith("ttl"):
@@ -33,6 +34,10 @@ def reason(namespace, filenames, output):
     # with output
     # for t in store.triples():
     #     print(t)
+
+    # plot(store, "scratch/mutant.dot")
+
+    print(f"# Triples {len(store)}")
 
     with smart_open(output) as fo:
         turtle_serialiser.serialise(store, fo, [(n, IRI(i)) for n, i in namespace])
