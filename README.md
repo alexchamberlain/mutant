@@ -79,7 +79,7 @@ A more complex example with symmetric and inverse properties (`schema:spouse` an
 #### Limitations/TODO/Caveats/Warnings
 
 1. [x] Remove rule implementations and replace them by `mutant` language coded rules.
-2. [ ] Rules need to be loaded _before_ the triples at the moment to work; this isn't good enough for a realistic system.
+2. [x] Rules need to be loaded _before_ the triples at the moment to work; this isn't good enough for a realistic system.
 
 ### `generic_rule`: `mutant` language parser
 

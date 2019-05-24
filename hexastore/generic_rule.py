@@ -40,22 +40,25 @@ class RecursiveRule:
 def parse_and_register(document, store):
     rules = parse(document)
 
+    def register_predicate_rule(p, callback, inferred_from):
+        store.register_predicate_rule(p, 0, callback, inferred_from)
+
     for r in rules:
-        _register_rule(r, store, [])
+        _register_rule(r, register_predicate_rule, [])
 
 
-def _register_rule(r, store, inferred_from):
+def _register_rule(r, register_predicate_rule, inferred_from):
     logger.debug(f"Registering {r}")
     if len(r.body) == 1:
         pattern = r.body[0]
 
         if isinstance(r, RecursiveRule):
             logger.debug(f"Registering RecursiveRule1")
-            store.register_predicate_rule(
+            register_predicate_rule(
                 pattern[1], RecursiveRule1(pattern[0], pattern[2], r.constraints, r.head, inferred_from), inferred_from
             )
         else:
-            store.register_predicate_rule(
+            register_predicate_rule(
                 pattern[1], GeneralRule1(pattern[0], pattern[2], r.constraints, r.head, inferred_from), inferred_from
             )
     else:
@@ -65,7 +68,7 @@ def _register_rule(r, store, inferred_from):
             if isinstance(r, RecursiveRule):
                 assert False
             else:
-                store.register_predicate_rule(
+                register_predicate_rule(
                     pattern[1],
                     GeneralRuleMany(pattern[0], pattern[2], rest, r.constraints, r.head, inferred_from),
                     inferred_from,
@@ -94,18 +97,30 @@ class GeneralRule1:
         self._head = head
         self._inferred_from = inferred_from
 
-    def __call__(self, store, s, p, o, insert):
+    def __repr__(self):
+        return f"GeneralRule1({self._s} {self._o} {self._constraints} {self._head} {self._inferred_from})"
+
+    def __call__(self, store, s, p, o):
+        logger.debug(f"Applying {self} to {s}, {p}, {o}")
         for s, os in store.pso[p].items():
+            if isinstance(self._s, Variable):
+                s_solution = Solution({self._s: s}, [])
+            elif s != self._s:
+                continue
+            else:
+                s_solution = Solution({self._s: s}, [])
+
             for o, status in os.items():
                 if not status.inserted:
                     continue
 
                 if isinstance(self._o, Variable):
-                    solution = Solution({self._s: s, self._o: o}, [])
+                    solution = s_solution.copy()
+                    solution.update({self._o: o})
+                elif o != self._o:
+                    continue
                 else:
-                    if o != self._o:
-                        continue
-                    solution = Solution({self._s: s, self._o: o}, [])
+                    solution = s_solution
 
                 constraints_pass = True
                 for constraint in self._constraints:
@@ -119,7 +134,7 @@ class GeneralRule1:
                 for triple_pattern in self._head:
                     triple = _resolve(triple_pattern, solution)
                     logger.debug(f"triple {triple}")
-                    insert(triple, self._inferred_from + [(s, p, o)])
+                    store.insert(triple, self._inferred_from + [(s, p, o)])
 
 
 class RecursiveRule1:
@@ -137,18 +152,30 @@ class RecursiveRule1:
         self._head = head
         self._inferred_from = inferred_from
 
-    def __call__(self, store, s, p, o, insert):
+    def __repr__(self):
+        return f"RecursiveRule1({self._s} {self._o} {self._constraints} {self._head} {self._inferred_from})"
+
+    def __call__(self, store, s, p, o):
+        logger.debug(f"Applying {self} to {s}, {p}, {o}")
         for s, os in store.pso[p].items():
+            if isinstance(self._s, Variable):
+                s_solution = Solution({self._s: s}, [])
+            elif s != self._s:
+                continue
+            else:
+                s_solution = Solution({self._s: s}, [])
+
             for o, status in os.items():
                 if not status.inserted:
                     continue
 
                 if isinstance(self._o, Variable):
-                    solution = Solution({self._s: s, self._o: o}, [])
+                    solution = s_solution.copy()
+                    solution.update({self._o: o})
+                elif o != self._o:
+                    continue
                 else:
-                    if o != self._o:
-                        continue
-                    solution = Solution({self._s: s}, [])
+                    solution = s_solution
 
                 constraints_pass = True
                 for constraint in self._constraints:
@@ -165,8 +192,7 @@ class RecursiveRule1:
                         _resolve_constraints(head.constraints, solution),
                         _resolve_patterns(head.head, solution),
                     )
-
-                    _register_rule(new_rule, store, self._inferred_from + [(s, p, o)])
+                    _register_rule(new_rule, store.register_predicate_rule, self._inferred_from + [(s, p, o)])
 
 
 class GeneralRuleMany:
@@ -186,15 +212,33 @@ class GeneralRuleMany:
         self._head = head
         self._inferred_from = inferred_from
 
-    def __call__(self, store, s, p, o, insert):
+    def __repr__(self):
+        return f"GeneralRuleMany({self._s}, {self._o}, {self._rest}, {self._constraints}, {self._head}, {self._inferred_from})"
+
+    def __call__(self, store, s, p, o):
+        logger.debug(f"Applying {self} to {s}, {p}, {o}")
         for s, os in store.pso[p].items():
+            if isinstance(self._s, Variable):
+                s_solution = Solution({self._s: s}, [])
+            elif s != self._s:
+                continue
+            else:
+                s_solution = Solution({self._s: s}, [])
+
             for o, status in os.items():
                 if not status.inserted:
                     continue
 
-                solution = Solution({self._s: s, self._o: o}, [])
+                if isinstance(self._o, Variable):
+                    solution = s_solution.copy()
+                    solution.update({self._o: o})
+                elif o != self._o:
+                    continue
+                else:
+                    solution = s_solution
 
                 patterns = [_resolve(triple_pattern, solution) for triple_pattern in self._rest]
+                logger.debug(f"patterns {patterns}")
                 solutions = engine.execute(store, patterns, [], solution)
 
                 for solution in solutions:
@@ -209,7 +253,7 @@ class GeneralRuleMany:
 
                     for triple_pattern in self._head:
                         triple = _resolve(triple_pattern, solution)
-                        insert(triple, self._inferred_from + [(s, p, o)])
+                        store.insert(triple, self._inferred_from + [(s, p, o)])
 
 
 def _resolve_patterns(patterns, solution):

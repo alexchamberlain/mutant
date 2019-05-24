@@ -3,6 +3,7 @@ import pytest
 from hexastore.ast import IRI
 from hexastore.memory import InMemoryHexastore
 from hexastore.default_forward_reasoner import default_forward_reasoner
+from hexastore.util import plot
 
 A = IRI("http://example.com/A")
 B = IRI("http://example.com/B")
@@ -33,14 +34,14 @@ TRANSITIVE_PROPERTY = IRI("http://www.w3.org/2002/07/owl#TransitiveProperty")
 MEMBER = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#member")
 
 
-def parent_sibling_rule(store, s, p, o, insert):
+def parent_sibling_rule(store, s, p, o):
     inferred_from = (s, p, o)
     for s_, status in store.ops[o][p].items():
         if not status.inserted or s == s_:
             continue
 
-        insert((s, SIBLING, s_), [inferred_from, (s_, p, o)])
-        insert((s_, SIBLING, s), [inferred_from, (s_, p, o)])
+        store.insert((s, SIBLING, s_), [inferred_from, (s_, p, o)])
+        store.insert((s_, SIBLING, s), [inferred_from, (s_, p, o)])
 
 
 @pytest.mark.default_forward_reasoner
@@ -101,6 +102,8 @@ def test_forward_reasoner_transitive_with_delete():
     reasoner.insert(SUBCLASS_OF, TYPE, TRANSITIVE_PROPERTY, 1)
     reasoner.insert(PERSON, SUBCLASS_OF, THING, 1)
     reasoner.insert(THING, SUBCLASS_OF, OWL_THING, 1)
+
+    plot(store, "scratch/test_forward_reasoner_transitive_with_delete.dot")
 
     reasoner.delete(SUBCLASS_OF, TYPE, TRANSITIVE_PROPERTY, 1)
 
@@ -202,7 +205,7 @@ def test_forward_reasoner_with_children_1():
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(CHILDREN, INVERSE_OF, PARENT, 1)
-    reasoner.register_predicate_rule(PARENT, parent_sibling_rule)
+    reasoner.register_predicate_rule(PARENT, 1, parent_sibling_rule)
 
     reasoner.insert(A, CHILDREN, C, 3)
     reasoner.insert(A, CHILDREN, D, 4)
@@ -222,7 +225,7 @@ def test_forward_reasoner_with_children():
 
     reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
     reasoner.insert(CHILDREN, INVERSE_OF, PARENT, 1)
-    reasoner.register_predicate_rule(PARENT, parent_sibling_rule)
+    reasoner.register_predicate_rule(PARENT, 1, parent_sibling_rule)
 
     reasoner.insert(A, SPOUSE, B, 2)
     reasoner.insert(C, PARENT, A, 3)

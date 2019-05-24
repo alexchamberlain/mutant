@@ -2,7 +2,7 @@ from collections import defaultdict
 import logging
 from typing import List, Optional
 
-from .ast import IRI, BlankNode
+from .ast import IRI, BlankNode, Variable
 from .model import Key
 from .typing import Triple
 
@@ -46,7 +46,7 @@ class ForwardReasoner:
 
         self.triples = self._store.triples
 
-    def register_predicate_rule(self, p, callback, inferred_from: Optional[List[Triple]] = None):
+    def register_predicate_rule(self, p, version, callback, inferred_from: Optional[List[Triple]] = None):
         if inferred_from is None:
             inferred_from = []
 
@@ -59,19 +59,35 @@ class ForwardReasoner:
         elif len(inferred_from) > 1:
             assert False
 
+        delta = {(s, p, o) for s, os in self._store.pso[p].items() for o, status in os.items() if status.inserted}
+        adaptor = RuleHexastoreAdaptor(self._store, self, version)
+
+        logger.debug(f"delta {delta}")
+
+        for inferred_from in delta:
+            s, p, o = inferred_from
+            logger.debug(f"inferred_from {inferred_from}")
+
+            callback(adaptor, s, p, o)
+
+        logger.debug(f"next_delta {adaptor.next_delta}")
+        delta = set()
+        for triple, inferred_from in adaptor.next_delta:
+            logger.debug(f"triple {triple}")
+            if self._insert(triple, inferred_from, version):
+                delta.add(triple)
+
+        self._apply_rules(delta, version)
+
     def insert(self, s, p, o, version):
         logger.debug(f"insert {(s, p, o)}")
         self._store.insert(s, p, o, version)
+        self._apply_rules({(s, p, o)}, version)
 
-        delta = {(s, p, o)}
-        next_delta = []
-
+    def _apply_rules(self, delta, version):
         while delta:
+            adaptor = RuleHexastoreAdaptor(self._store, self, version)
             logger.debug(f"delta {delta}")
-
-            def _insert(triple, inferred_from):
-                print(triple, inferred_from)
-                next_delta.append((triple, inferred_from))
 
             for inferred_from in delta:
                 s, p, o = inferred_from
@@ -80,18 +96,18 @@ class ForwardReasoner:
                 if p in self._predicate_rules:
                     rules = self._predicate_rules[p]
                     for r in rules:
-                        r(self, s, p, o, _insert)
+                        r(adaptor, s, p, o)
 
-            logger.debug(f"next_delta {next_delta}")
+            logger.debug(f"next_delta {adaptor.next_delta}")
             delta = set()
-            for triple, inferred_from in next_delta:
+            for triple, inferred_from in adaptor.next_delta:
                 logger.debug(f"triple {triple}")
                 if self._insert(triple, inferred_from, version):
                     delta.add(triple)
-            next_delta = []
 
     def _insert(self, triple, inferred_from, version):
         logger.debug(f"_insert {triple} {inferred_from}")
+        assert all(not isinstance(t, Variable) for t in triple)
         inserted = self._store.insert(*triple, version)
 
         if not inserted and self._is_circular(triple, inferred_from):
@@ -188,3 +204,26 @@ def _delete_node(store, node, version):
     triples = [(node, p, o) for p, os in store.spo[node].items() for o, status in os.items() if status.inserted]
     for t in triples:
         store.delete(*t, version)
+
+
+class RuleHexastoreAdaptor:
+    def __init__(self, store, forward_reasoner, version):
+        self._store = store
+        self._forward_reasoner = forward_reasoner
+        self._version = version
+
+        self.spo = self._store.spo
+        self.pos = self._store.pos
+        self.osp = self._store.osp
+        self.sop = self._store.sop
+        self.ops = self._store.ops
+        self.pso = self._store.pso
+
+        self.next_delta = []
+
+    def insert(self, triple, inferred_from):
+        logger.debug(f"insert {(triple, inferred_from)}")
+        self.next_delta.append((triple, inferred_from))
+
+    def register_predicate_rule(self, p, callback, inferred_from: Optional[List[Triple]] = None):
+        self._forward_reasoner.register_predicate_rule(p, self._version, callback, inferred_from)
