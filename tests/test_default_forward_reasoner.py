@@ -3,7 +3,6 @@ import pytest
 from hexastore.ast import IRI
 from hexastore.memory import InMemoryHexastore
 from hexastore.default_forward_reasoner import default_forward_reasoner
-from hexastore.util import plot
 
 A = IRI("http://example.com/A")
 B = IRI("http://example.com/B")
@@ -65,8 +64,6 @@ def test_default_forward_reasoner_with_delete():
 
     assert (B, SPOUSE, A) in store
 
-    plot(store, "scratch/test_default_forward_reasoner_with_delete.dot")
-
     reasoner.delete(A, SPOUSE, B, 3)
 
     assert list(store.triples()) == [(SPOUSE, TYPE, SYMMETRIC_PROPERTY)]
@@ -104,8 +101,6 @@ def test_forward_reasoner_transitive_with_delete():
     reasoner.insert(SUBCLASS_OF, TYPE, TRANSITIVE_PROPERTY, 1)
     reasoner.insert(PERSON, SUBCLASS_OF, THING, 1)
     reasoner.insert(THING, SUBCLASS_OF, OWL_THING, 1)
-
-    plot(store, "scratch/test_forward_reasoner_transitive_with_delete.dot")
 
     reasoner.delete(SUBCLASS_OF, TYPE, TRANSITIVE_PROPERTY, 1)
 
