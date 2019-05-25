@@ -66,7 +66,7 @@ A more complex example with symmetric and inverse properties (`schema:spouse` an
 
 ### `memory`: In Memory Hexastore
 
-`hexastore.memory` implements an in-memory hexastore, based on a paper entitled [Hexastore: Sextuple Indexing for Semantic Web Data Management][1]. It heavily relies on the `sorted` module, which implements a sorted list, sorted mapping and a default variant thereof. This makes the hexastore implement quite simple and succinct. The hexastore structure has been extended to support reified statements, versioned history and inserted/deleted statements.
+`hexastore.memory` implements an in-memory hexastore, based on a paper entitled [Hexastore: Sextuple Indexing for Semantic Web Data Management][1]. It heavily relies on the `sorted` module, which implements a sorted list, sorted mapping and a default variant thereof. This makes the hexastore implementation quite simple and succinct. The hexastore structure has been extended to support reified statements, versioned history and inserted/deleted statements.
 
 ### `engine`: Pattern matching engine
 
@@ -76,14 +76,9 @@ A more complex example with symmetric and inverse properties (`schema:spouse` an
 
 `hexastore.forward_reasoner` implements a semi-naive forward reasoner for RDF, based on ideas from [Datalog][2]. "semi-naive" simply means that during rule iteration, you only consider triples that have been added in the previous iteration. The forward reasoner records how a triple was found, which allows us to delete triples efficiently.
 
-#### Limitations/TODO/Caveats/Warnings
-
-1. [x] Remove rule implementations and replace them by `mutant` language coded rules.
-2. [x] Rules need to be loaded _before_ the triples at the moment to work; this isn't good enough for a realistic system.
-
 ### `generic_rule`: `mutant` language parser
 
-The forward reasoner ~~doesn't~~ shouldn't know anything about particular rules; it just implements the forward reasoning engine. The rules themselves are written in a DSL, which simplifies understanding them considerably. `hexastore.generic_rule` implements the parser and adapts the AST into an executable rule for the forward reasoner.
+The forward reasoner doesn't know anything about particular rules; it just implements the forward reasoning engine. The rules themselves are written in a DSL, which simplifies understanding them considerably. `hexastore.generic_rule` implements the parser and adapts the AST into an executable rule for the forward reasoner.
 
 ### `turtle`/`turtle_serialiser`: Basic parser/serialiser for turtle
 
