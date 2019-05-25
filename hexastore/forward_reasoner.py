@@ -119,18 +119,20 @@ class ForwardReasoner:
         elif len(inferred_from) == 1:
             self._store.insert(triple, INFERRED_FROM, inferred_from[0], version)
         else:
-            inferred_from = sorted(inferred_from, key=Key)
-            for node, status in self._store.ops[BAG][TYPE].items():
-                if not status.inserted:
-                    continue
+            if not inserted:
+                inferred_from = sorted(inferred_from, key=Key)
+                # for node, status in self._store.ops[BAG][TYPE].items():
+                for node, status in self._store.spo[triple][INFERRED_FROM].items():
+                    if not status.inserted:
+                        continue
 
-                if not (triple, INFERRED_FROM, node) in self._store:
-                    continue
+                    if not (node, TYPE, BAG) in self._store:
+                        continue
 
-                members = [o for o, status in self._store.spo[node][MEMBER].items() if status.inserted]
-                logger.debug(f"_insert == {members} {inferred_from}")
-                if members == inferred_from:
-                    return inserted
+                    members = [o for o, status in self._store.spo[node][MEMBER].items() if status.inserted]
+                    logger.debug(f"_insert == {members} {inferred_from}")
+                    if members == inferred_from:
+                        return inserted
 
             node = BlankNode()
             self._store.insert(node, TYPE, BAG, version)
