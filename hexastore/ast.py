@@ -129,5 +129,11 @@ class TripleStatusItem:
     valid_to: Optional[int] = attr.ib(default=None)
 
 
-#  TODO: Verify the following order
-TYPE_ORDER = [tuple, BlankNode, IRI, str, LangTaggedString, int, decimal.Decimal, float, Variable, type(None)]
+# Reference: https://www.w3.org/TR/rdf-sparql-query/#modOrderBy
+#   SPARQL also fixes an order between some kinds of RDF terms that would not otherwise be ordered:
+#
+#   (Lowest) no value assigned to the variable or expression in this solution.
+#   Blank nodes
+#   IRIs
+#   RDF literals
+TYPE_ORDER = [type(None), tuple, BlankNode, IRI, str, LangTaggedString, int, decimal.Decimal, float, Variable]
