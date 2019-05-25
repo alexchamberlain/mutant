@@ -1,6 +1,6 @@
 from collections import defaultdict
 import logging
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from .ast import IRI, BlankNode, Variable
 from .model import Key
@@ -34,8 +34,8 @@ class ForwardReasoner:
 
         self._symmetric_properties = set()
         self._inverse_map = {}
-        self._predicate_rules = defaultdict(list)
-        self._rule_deletion_map = defaultdict(list)
+        self._predicate_rules = defaultdict(set)
+        self._rule_deletion_map = defaultdict(set)
 
         self.spo = self._store.spo
         self.pos = self._store.pos
@@ -46,16 +46,16 @@ class ForwardReasoner:
 
         self.triples = self._store.triples
 
-    def register_predicate_rule(self, p, version, callback, inferred_from: Optional[List[Triple]] = None):
+    def register_predicate_rule(self, p, version, callback, inferred_from: Optional[Tuple[Triple]] = None):
         if inferred_from is None:
             inferred_from = []
 
         logger.debug(f"Registering predicate rule {p}, {callback}, {inferred_from}")
-        self._predicate_rules[p].append(callback)
+        self._predicate_rules[p].add(callback)
 
         if len(inferred_from) == 1:
             assert isinstance(inferred_from[0], tuple)
-            self._rule_deletion_map[inferred_from[0]].append((p, callback))
+            self._rule_deletion_map[inferred_from[0]].add((p, callback))
         elif len(inferred_from) > 1:
             assert False
 
@@ -114,7 +114,7 @@ class ForwardReasoner:
             logger.debug(f"_insert Rejecting {triple}")
             return False
 
-        if not isinstance(inferred_from, list):
+        if not isinstance(inferred_from, list) and not isinstance(inferred_from, tuple):
             self._store.insert(triple, INFERRED_FROM, inferred_from, version)
         elif len(inferred_from) == 1:
             self._store.insert(triple, INFERRED_FROM, inferred_from[0], version)
@@ -141,7 +141,7 @@ class ForwardReasoner:
         return inserted
 
     def _is_circular(self, triple, inferred_from):
-        if not isinstance(inferred_from, list):
+        if not isinstance(inferred_from, list) and not isinstance(inferred_from, tuple):
             inferred_from = [inferred_from]
 
         for foo in inferred_from:
@@ -189,6 +189,8 @@ class ForwardReasoner:
             logger.debug(f"Removing predicate rule {p}, {callback}, {inferred_from}")
 
             self._predicate_rules[p].remove(callback)
+
+        del self._rule_deletion_map[inferred_from]
 
 
 def _li(n: int):

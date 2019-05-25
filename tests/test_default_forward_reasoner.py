@@ -65,6 +65,8 @@ def test_default_forward_reasoner_with_delete():
 
     assert (B, SPOUSE, A) in store
 
+    plot(store, "scratch/test_default_forward_reasoner_with_delete.dot")
+
     reasoner.delete(A, SPOUSE, B, 3)
 
     assert list(store.triples()) == [(SPOUSE, TYPE, SYMMETRIC_PROPERTY)]

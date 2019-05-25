@@ -23,7 +23,7 @@ TriplePattern = Tuple[TermPattern, TermPattern, TermPattern]
 rule_parser = Lark(pkgutil.get_data("hexastore", "lark/rule.lark").decode(), start="document", parser="lalr")
 
 
-@attr.s
+@attr.s(frozen=True)
 class Rule:
     body = attr.ib()
     constraints = attr.ib()
@@ -44,7 +44,7 @@ def parse_and_register(document, store):
         store.register_predicate_rule(p, 0, callback, inferred_from)
 
     for r in rules:
-        _register_rule(r, register_predicate_rule, [])
+        _register_rule(r, register_predicate_rule, tuple())
 
 
 def _register_rule(r, register_predicate_rule, inferred_from):
@@ -63,7 +63,7 @@ def _register_rule(r, register_predicate_rule, inferred_from):
             )
     else:
         for i, pattern in enumerate(r.body):
-            rest = [p for j, p in enumerate(r.body) if i != j]
+            rest = tuple(p for j, p in enumerate(r.body) if i != j)
 
             if isinstance(r, RecursiveRule):
                 assert False
@@ -89,8 +89,12 @@ class GeneralRule1:
         o: Variable,
         constraints: List[Callable[[Solution], bool]],
         head: List[TriplePattern],
-        inferred_from: List[Triple],
+        inferred_from: Tuple[Triple],
     ):
+        assert isinstance(constraints, tuple)
+        assert isinstance(head, tuple)
+        assert isinstance(inferred_from, tuple)
+
         self._s = s
         self._o = o
         self._constraints = constraints
@@ -99,6 +103,21 @@ class GeneralRule1:
 
     def __repr__(self):
         return f"GeneralRule1({self._s} {self._o} {self._constraints} {self._head} {self._inferred_from})"
+
+    def __eq__(self, other):
+        if not isinstance(other, GeneralRule1):
+            return NotImplemented
+
+        return (
+            self._s == other._s
+            and self._o == other._o
+            and self._constraints == other._constraints
+            and self._head == other._head
+            and self._inferred_from == other._inferred_from
+        )
+
+    def __hash__(self):
+        return hash((self._s, self._o, self._constraints, self._head, self._inferred_from))
 
     def __call__(self, store, s, p, o):
         logger.debug(f"Applying {self} to {s}, {p}, {o}")
@@ -134,7 +153,7 @@ class GeneralRule1:
                 for triple_pattern in self._head:
                     triple = _resolve(triple_pattern, solution)
                     logger.debug(f"triple {triple}")
-                    store.insert(triple, self._inferred_from + [(s, p, o)])
+                    store.insert(triple, self._inferred_from + ((s, p, o),))
 
 
 class RecursiveRule1:
@@ -142,10 +161,14 @@ class RecursiveRule1:
         self,
         s: Variable,
         o: Variable,
-        constraints: List[Callable[[Solution], bool]],
-        head: Rule,
-        inferred_from: List[Triple],
+        constraints: Tuple[Callable[[Solution], bool]],
+        head: Tuple[Rule],
+        inferred_from: Tuple[Triple],
     ):
+        assert isinstance(constraints, tuple)
+        assert isinstance(head, tuple)
+        assert isinstance(inferred_from, tuple)
+
         self._s = s
         self._o = o
         self._constraints = constraints
@@ -154,6 +177,21 @@ class RecursiveRule1:
 
     def __repr__(self):
         return f"RecursiveRule1({self._s} {self._o} {self._constraints} {self._head} {self._inferred_from})"
+
+    def __eq__(self, other):
+        if not isinstance(other, GeneralRule1):
+            return NotImplemented
+
+        return (
+            self._s == other._s
+            and self._o == other._o
+            and self._constraints == other._constraints
+            and self._head == other._head
+            and self._inferred_from == other._inferred_from
+        )
+
+    def __hash__(self):
+        return hash((self._s, self._o, self._constraints, self._head, self._inferred_from))
 
     def __call__(self, store, s, p, o):
         logger.debug(f"Applying {self} to {s}, {p}, {o}")
@@ -192,7 +230,7 @@ class RecursiveRule1:
                         _resolve_constraints(head.constraints, solution),
                         _resolve_patterns(head.head, solution),
                     )
-                    _register_rule(new_rule, store.register_predicate_rule, self._inferred_from + [(s, p, o)])
+                    _register_rule(new_rule, store.register_predicate_rule, self._inferred_from + ((s, p, o),))
 
 
 class GeneralRuleMany:
@@ -203,8 +241,13 @@ class GeneralRuleMany:
         rest: List[TriplePattern],
         constraints: List[Callable[[Solution], bool]],
         head: List[TriplePattern],
-        inferred_from: List[Triple],
+        inferred_from: Tuple[Triple],
     ):
+        assert isinstance(rest, tuple)
+        assert isinstance(constraints, tuple)
+        assert isinstance(head, tuple)
+        assert isinstance(inferred_from, tuple)
+
         self._s = s
         self._o = o
         self._rest = rest
@@ -214,6 +257,22 @@ class GeneralRuleMany:
 
     def __repr__(self):
         return f"GeneralRuleMany({self._s}, {self._o}, {self._rest}, {self._constraints}, {self._head}, {self._inferred_from})"
+
+    def __eq__(self, other):
+        if not isinstance(other, GeneralRule1):
+            return NotImplemented
+
+        return (
+            self._s == other._s
+            and self._o == other._o
+            and self._rest == other.rest
+            and self._constraints == other._constraints
+            and self._head == other._head
+            and self._inferred_from == other._inferred_from
+        )
+
+    def __hash__(self):
+        return hash((self._s, self._o, self._rest, self._constraints, self._head, self._inferred_from))
 
     def __call__(self, store, s, p, o):
         logger.debug(f"Applying {self} to {s}, {p}, {o}")
@@ -253,11 +312,11 @@ class GeneralRuleMany:
 
                     for triple_pattern in self._head:
                         triple = _resolve(triple_pattern, solution)
-                        store.insert(triple, self._inferred_from + [(s, p, o)])
+                        store.insert(triple, self._inferred_from + ((s, p, o),))
 
 
 def _resolve_patterns(patterns, solution):
-    return [_resolve(p, solution) for p in patterns]
+    return tuple(_resolve(p, solution) for p in patterns)
 
 
 def _resolve_constraints(constraints, solution):
@@ -289,6 +348,9 @@ class ConstraintIsNot:
 
         return self._variables == other._variables
 
+    def __hash__(self):
+        return hash(self._variables)
+
     def __call__(self, solution):
         n = len({solution.get(v) for v in self._variables})
         return n == len(self._variables)
@@ -317,12 +379,12 @@ class _Transformer(Transformer):
 
     def terminating_rule(self, children):
         kwargs = {c.data: c.children for c in children}
-        return Rule(kwargs["body"], kwargs.get("constraints", []), kwargs["head"])
+        return Rule(tuple(kwargs["body"]), tuple(kwargs.get("constraints", tuple())), tuple(kwargs["head"]))
 
     def recursive_rule(self, children):
         rule = children.pop()
         kwargs = {c.data: c.children for c in children}
-        return RecursiveRule(kwargs["body"], kwargs.get("constraints", []), rule)
+        return RecursiveRule(tuple(kwargs["body"]), tuple(kwargs.get("constraints", tuple())), tuple(rule))
 
     @v_args(inline=True)
     def triple(self, s, p, o):
@@ -356,4 +418,4 @@ class _Transformer(Transformer):
     @v_args(inline=True)
     def constraint(self, variable1, op, variable2):
         if op.data == "is_not":
-            return ConstraintIsNot([variable1, variable2])
+            return ConstraintIsNot((variable1, variable2))

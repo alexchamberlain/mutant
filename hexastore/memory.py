@@ -53,6 +53,10 @@ class InMemoryHexastore:
         else:
             status = TripleStatus([])
 
+        asser_tuple_length(s)
+        asser_tuple_length(p)
+        asser_tuple_length(o)
+
         self.n_triples += 1
 
         status.statuses.append(TripleStatusItem(valid_from=valid_from))
@@ -122,3 +126,8 @@ class InMemoryHexastore:
             s, p = p, s
 
         return self._lists[s][p]
+
+
+def asser_tuple_length(t):
+    if isinstance(t, tuple):
+        assert len(t) == 3

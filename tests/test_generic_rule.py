@@ -73,12 +73,12 @@ def test_rule_with_constraint():
     )
 
     assert rule == generic_rule.Rule(
-        [
+        (
             (Variable("child1"), IRI("https://schema.org/parent"), Variable("parent")),
             (Variable("child2"), IRI("https://schema.org/parent"), Variable("parent")),
-        ],
-        [(generic_rule.ConstraintIsNot([Variable("child1"), Variable("child2")]))],
-        [(Variable("child1"), IRI("https://schema.org/sibling"), Variable("child2"))],
+        ),
+        ((generic_rule.ConstraintIsNot((Variable("child1"), Variable("child2")))),),
+        ((Variable("child1"), IRI("https://schema.org/sibling"), Variable("child2")),),
     )
 
 
@@ -95,12 +95,12 @@ def test_parent_sibling():
 
     assert rules == [
         generic_rule.Rule(
-            [
+            (
                 (Variable("child1"), IRI("https://schema.org/parent"), Variable("parent")),
                 (Variable("child2"), IRI("https://schema.org/parent"), Variable("parent")),
-            ],
-            [],
-            [(Variable("child1"), IRI("https://schema.org/sibling"), Variable("child2"))],
+            ),
+            tuple(),
+            ((Variable("child1"), IRI("https://schema.org/sibling"), Variable("child2")),),
         )
     ]
 
@@ -118,12 +118,12 @@ def test_parent_sibling_2():
 
     assert rules == [
         generic_rule.Rule(
-            [
+            (
                 (Variable("child1"), IRI("https://schema.org/parent"), Variable("parent")),
                 (Variable("child2"), IRI("https://schema.org/parent"), Variable("parent")),
-            ],
-            [],
-            [(Variable("child1"), IRI("https://schema.org/sibling"), Variable("child2"))],
+            ),
+            tuple(),
+            ((Variable("child1"), IRI("https://schema.org/sibling"), Variable("child2")),),
         )
     ]
 
@@ -143,13 +143,15 @@ def test_symmetric():
 
     assert rules == [
         generic_rule.RecursiveRule(
-            [(Variable("p"), IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), SYMMETRIC_PROPERTY)],
-            [],
-            [
+            ((Variable("p"), IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), SYMMETRIC_PROPERTY),),
+            tuple(),
+            (
                 generic_rule.Rule(
-                    [(Variable("s"), Variable("p"), Variable("o"))], [], [(Variable("o"), Variable("p"), Variable("s"))]
-                )
-            ],
+                    ((Variable("s"), Variable("p"), Variable("o")),),
+                    tuple(),
+                    ((Variable("o"), Variable("p"), Variable("s")),),
+                ),
+            ),
         )
     ]
 
