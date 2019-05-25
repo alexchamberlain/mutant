@@ -7,7 +7,6 @@ from hexastore import generic_rule, turtle, turtle_serialiser
 from hexastore.ast import IRI
 from hexastore.memory import InMemoryHexastore
 from hexastore.default_forward_reasoner import default_forward_reasoner
-from hexastore.util import plot
 
 
 @click.group()
@@ -30,12 +29,6 @@ def reason(namespace, filenames, output):
         elif filename.endswith("mtt"):
             with open(filename) as fo:
                 generic_rule.parse_and_register(fo.read(), reasoner)
-
-    # with output
-    # for t in store.triples():
-    #     print(t)
-
-    # plot(store, "scratch/mutant.dot")
 
     print(f"# Triples {len(store)}")
 
