@@ -13,6 +13,7 @@ from typing import (
     Tuple,
     Union,
     ValuesView,
+    cast,
 )
 
 from . import bisect
@@ -27,7 +28,11 @@ V = typing.TypeVar("V")
 
 class SortedList(Sequence[T], AbstractSet[T]):
     def __init__(self, iterable: Optional[Iterable[T]] = None, *, key: Optional[Callable[[T], U]] = None):
-        self.key = key
+
+        if key is None:
+            self.key = cast(Callable[[T], U], lambda x: x)
+        else:
+            self.key = key
 
         if iterable is None:
             self._l: List[T] = []
