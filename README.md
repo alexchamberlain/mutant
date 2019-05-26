@@ -84,6 +84,21 @@ The forward reasoner doesn't know anything about particular rules; it just imple
 
 We need to read and write from some format; Turtle is both readable and simple enough to write a parser in a couple of hours. The parser and serialiser are good enough for the examples in the repo; in particular, blank node support is not complete.
 
+## Roadmap/Ideas
+
+### Ability to apply a diff to a file
+
+Let us suppose that you have an existing store (ie an RDBMS) that you want to output as RDF. You write a script to dump said store as an RDF document and apply some rules. Great!
+
+But then, that store moves on. Records are added. Records are deleted.
+
+The only option right now is to dump the store again, and re-run the rules from the ground up. This seems rather wasteful and slow. Idea: Given the original dump, the rules, the original output and the new dump, calculate the delta between the original dump and the new dump and apply the rules based on the knowledge in the original output.
+
+### Other ideas
+1. Allow hibrid files with a mix of triples and rules
+2. Include test cases along side rules.
+3. mutant-server
+
 ## Why Python?
 
 To get out ahead of this one, Python was used simply because it's the language I'm most comfortable with and productive in. In this PoC, I wanted to concentrate on the datastructures in use, rather than top notch performance. It also has some amazing patterns, such as the Sequence and Mapping Protocols, that make implementing a Hexastore quite elegant.
