@@ -260,3 +260,35 @@ def test_turtle_example_12():
         (IRI("http://en.wikipedia.org/wiki/Helium"), IRI("http://example.org/elements#atomicNumber"), 2),
         (IRI("http://en.wikipedia.org/wiki/Helium"), IRI("http://example.org/elements#specificGravity"), 1.663e-4),
     ]
+
+
+@pytest.mark.turtle
+def test_turtleX_example_3():
+    document = """
+        @prefix : <http://example.org/> .
+        @prefix foaf: <http://xmlns.com/foaf/0.1/> .
+        @prefix dct: <http://purl.org/dc/elements/1.1/> .
+
+        :bob foaf:name "Bob" .
+        <<:bob foaf:age 23>> dct:creator <http://example.com/crawlers#c1> ;
+            dct:source <http://example.net/homepage-listing.html> .
+    """
+
+    store = InMemoryHexastore()
+
+    parse(document, lambda s, p, o: store.insert(s, p, o, 1))
+
+    assert list(store.triples()) == [
+        (
+            (IRI("http://example.org/bob"), IRI("http://xmlns.com/foaf/0.1/age"), 23),
+            IRI("http://purl.org/dc/elements/1.1/creator"),
+            IRI("http://example.com/crawlers#c1"),
+        ),
+        (
+            (IRI("http://example.org/bob"), IRI("http://xmlns.com/foaf/0.1/age"), 23),
+            IRI("http://purl.org/dc/elements/1.1/source"),
+            IRI("http://example.net/homepage-listing.html"),
+        ),
+        (IRI("http://example.org/bob"), IRI("http://xmlns.com/foaf/0.1/age"), 23),
+        (IRI("http://example.org/bob"), IRI("http://xmlns.com/foaf/0.1/name"), "Bob"),
+    ]

@@ -23,11 +23,11 @@ object_list: object ("," object)*
 verb: _predicate
     | "a" -> a
 //[10]    subject ::= iri | BlankNode | collection
-subject: _iri | blank_node | collection
+subject: _iri | blank_node | collection | triple_x
 //[11]    predicate   ::= iri
 _predicate: _iri
 //[12]    object  ::= iri | BlankNode | collection | blankNodePropertyList | literal
-object: _iri | blank_node | collection | blank_node_property_list | literal
+object: _iri | blank_node | collection | blank_node_property_list | literal | triple_x
 //[13]    literal ::= RDFLiteral | NumericLiteral | BooleanLiteral
 literal: rdf_literal | numeric_literal | boolean_literal
 //[14]    blankNodePropertyList   ::= '[' predicateObjectList ']'
@@ -51,6 +51,10 @@ _iri: iriref | _prefixed_name
 _prefixed_name: pname_ln | PNAME_NS
 //[137s]  BlankNode   ::= BLANK_NODE_LABEL | ANON
 blank_node: BLANK_NODE_LABEL | ANON
+
+triple_x: "<<" subject_x _predicate object_x ">>"
+subject_x: _iri | blank_node | triple_x
+object_x: _iri | blank_node | literal | triple_x
 
 //[18]    IRIREF  ::= '<' ([^#x00-#x20<>"{}|^`\] | UCHAR)* '>' /* #x00=NULL #01-#x1F=control codes #x20=space */
 iriref: "<" IRICHAR? ">"

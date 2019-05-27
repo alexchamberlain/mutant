@@ -69,6 +69,12 @@ class _Transformer(Transformer):
     def object(self, arg):
         return arg
 
+    def subject_x(self, arg):
+        return arg
+
+    def object_x(self, arg):
+        return arg
+
     def literal(self, arg):
         return arg
 
@@ -110,6 +116,11 @@ class _Transformer(Transformer):
             return decimal.Decimal(arg)
         elif arg.type == "DOUBLE":
             return float(arg)
+
+    def triple_x(self, subject_x, predicate, object_x):
+        t = (subject_x, predicate, object_x)
+        self._insert(*t)
+        return t
 
 
 def parse(document, store):

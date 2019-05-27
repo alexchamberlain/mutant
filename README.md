@@ -96,8 +96,10 @@ The only option right now is to dump the store again, and re-run the rules from 
 
 ### Other ideas
 1. Allow hibrid files with a mix of triples and rules
-2. Include test cases along side rules.
-3. mutant-server
+2. Reification Done Right
+    1. Basic parsing done; needs serialisation.
+3. Include test cases along side rules.
+4. mutant-server
 
 ## Why Python?
 
