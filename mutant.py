@@ -3,7 +3,7 @@ import contextlib
 
 import click
 
-from hexastore import generic_rule, turtle, turtle_serialiser
+from hexastore import generic_rule, turtle, turtle_serialiser, diff
 from hexastore.ast import IRI
 from hexastore.memory import InMemoryHexastore
 from hexastore.default_forward_reasoner import default_forward_reasoner
@@ -29,6 +29,31 @@ def reason(namespace, filenames, output):
         elif filename.endswith("mtt"):
             with open(filename) as fo:
                 generic_rule.parse_and_register(fo.read(), reasoner)
+
+    print(f"# Triples {len(store)}")
+
+    with smart_open(output) as fo:
+        turtle_serialiser.serialise(store, fo, [(n, IRI(i)) for n, i in namespace])
+
+
+@cli.command()
+@click.option("-n", "--namespace", type=(str, str), multiple=True)
+@click.argument("filenames", nargs=-1)
+@click.argument("output", nargs=1)
+def patch(namespace, filenames, output):
+    store = InMemoryHexastore()
+    reasoner = default_forward_reasoner(store)
+
+    for filename in filenames:
+        with open(filename) as fo:
+            if filename.endswith("ttl"):
+                turtle.parse(fo.read(), lambda s, p, o: reasoner.insert(s, p, o, 1))
+            elif filename.endswith("mtt"):
+                generic_rule.parse_and_register(fo.read(), reasoner)
+            elif filename.endswith("ttl"):
+                diff.parse(
+                    fo.read(), lambda s, p, o: reasoner.insert(s, p, o, 1), lambda s, p, o: reasoner.delete(s, p, o, 1)
+                )
 
     print(f"# Triples {len(store)}")
 
