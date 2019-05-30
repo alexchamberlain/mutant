@@ -25,6 +25,10 @@ class _Transformer(Transformer):
         self._namespaces: Dict[str, Namespace] = {}
         self._bnodes: Dict[str, BlankNode] = {}
 
+    @property
+    def namespaces(self):
+        return self._namespaces
+
     def prefix_id(self, name, iri):
         n = name[:-1]
         self._namespaces[n] = Namespace(n, iri)
@@ -124,10 +128,12 @@ class _Transformer(Transformer):
 
 
 def parse(document, store):
+    transformer = _Transformer(store)
     turtle_parser = Lark(
         pkgutil.get_data("hexastore", "lark/turtle.lark").decode(),
         start="turtle_document",
         parser="lalr",
-        transformer=_Transformer(store),
+        transformer=transformer,
     )
     turtle_parser.parse(document)
+    return transformer.namespaces

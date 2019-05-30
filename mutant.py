@@ -1,12 +1,17 @@
 import sys
 import contextlib
+import logging
+from typing import Dict
 
 import click
 
 from hexastore import generic_rule, turtle, turtle_serialiser
 from hexastore.ast import IRI
+from hexastore.namespace import Namespace
 from hexastore.memory import InMemoryHexastore
 from hexastore.default_forward_reasoner import default_forward_reasoner
+
+logger = logging.getLogger(__name__)
 
 
 @click.group()
@@ -22,10 +27,14 @@ def reason(namespace, filenames, output):
     store = InMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
+    namespaces: Dict[str, Namespace] = {n: Namespace(n, IRI(i)) for n, i in namespace}
+
     for filename in filenames:
         if filename.endswith("ttl"):
             with open(filename) as fo:
-                turtle.parse(fo.read(), lambda s, p, o: reasoner.insert(s, p, o, 1))
+                new_namespaces = turtle.parse(fo.read(), lambda s, p, o: reasoner.insert(s, p, o, 1))
+
+            _update_namespaces(namespaces, new_namespaces)
         elif filename.endswith("mtt"):
             with open(filename) as fo:
                 generic_rule.parse_and_register(fo.read(), reasoner)
@@ -33,7 +42,15 @@ def reason(namespace, filenames, output):
     print(f"# Triples {len(store)}")
 
     with smart_open(output) as fo:
-        turtle_serialiser.serialise(store, fo, [(n, IRI(i)) for n, i in namespace])
+        turtle_serialiser.serialise(store, fo, [(n.name, n.prefix) for n in namespaces.values()])
+
+
+def _update_namespaces(namespaces, new_namespaces):
+    for prefix, namespace in new_namespaces.items():
+        if prefix not in namespaces:
+            namespaces[prefix] = namespace
+        elif namespaces[prefix] != namespace:
+            logger.warn(f"Ignoring {prefix}: {namespace}; using {prefix}: {namespaces[prefix]}")
 
 
 @contextlib.contextmanager

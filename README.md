@@ -29,7 +29,7 @@ It's fair to say that based on the above information, Roxy is a sibling of Chip,
 
 You can run this by using the following command:
 
-    python mutant.py reason -n example https://example.org/ -n schema https://schema.org/ examples/family-tree-simple/rules.mtt examples/family-tree-simple/base.ttl -
+    python mutant.py reason examples/family-tree-simple/rules.mtt examples/family-tree-simple/base.ttl -
 
 Which will produce the following output:
 

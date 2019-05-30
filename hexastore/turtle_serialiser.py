@@ -25,13 +25,14 @@ class _Serialiser:
             ps = [self._serialise_predicate_object_list(p, os) for p, os in po.items()]
             pss = " ;\n    ".join(ps)
 
-            fo.write(f"{self._terms[s]} {pss} .\n\n")
+            if pss:
+                fo.write(f"{self._terms[s]} {pss} .\n\n")
 
     def _serialise_predicate_object_list(self, p, os):
         objs = [self._terms[o] for o, status in os.items() if status.inserted]
         o = ", ".join(objs)
 
-        return f"{self._terms[p]} {o}"
+        return f"{self._terms[p]} {o}" if o else ""
 
     def _serialise_term(self, t):
         if isinstance(t, IRI):
