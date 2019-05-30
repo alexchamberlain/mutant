@@ -52,6 +52,17 @@ example:roxy schema:name "Roxy Rubble" ;
 
 A more complex example with symmetric and inverse properties (`schema:spouse` and `schema:children`) is provided in `examples/family-tree`.
 
+## Key Concepts
+
+### Hexastore
+
+The in-memory storage is based on a paper entitled [Hexastore: Sextuple Indexing for Semantic Web Data Management][1]. The paper proposes a bespoke storage format for RDF that exploits its simple triple structure. That is,
+it uses 6 indices that cover every permutation of subject (s), predicate (p) and object (o), and are conventially known by their initials: spo, pos, osp, sop, ops, pso.
+
+### RDF*/Turtle*
+
+In the paper [Foundations of an Alternative Approach to Reification in RDF][3], an extension to RDF was proposed that allowed subjects and objects to themselves be triples; Blazegraph dubbed this [Reification Done Right][4]. It allows you to simply make statements about other statements, without the need for `rdfs:Statement` blank nodes, which are expensive to store and hard to query. It can be mapped back to RDF if necessary, though we have not implemented that at this stage.
+
 ## Technology
 
 `mutant` is implemented as a single Python package `hexastore`, which has the following levelised structure:
@@ -96,10 +107,6 @@ The only option right now is to dump the store again, and re-run the rules from 
 
 ### Other ideas
 1. Allow hibrid files with a mix of triples and rules
-2. Reification Done Right
-    1. Basic parsing done.
-    2. Serialisation done.
-    3. TODO: Documentation and citation
 3. Include test cases along side rules.
 4. mutant-server
 
@@ -109,3 +116,5 @@ To get out ahead of this one, Python was used simply because it's the language I
 
 [1]: http://www.vldb.org/pvldb/1/1453965.pdf
 [2]: https://en.wikipedia.org/wiki/Datalog
+[3]: https://arxiv.org/pdf/1406.3399.pdf
+[4]: https://wiki.blazegraph.com/wiki/index.php/Reification_Done_Right
