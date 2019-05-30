@@ -11,11 +11,11 @@ Let us suppose we have the following Turtle file:
 @prefix example: <https://example.org/> .
 
 example:pebbles schema:name "Pebbles Flintstone" .
-example:bamn-bamn schema:name "Bamm-Bamm Rubble" .
+example:bamm-bamm schema:name "Bamm-Bamm Rubble" .
 example:roxy schema:name "Roxy Rubble" ;
-    schema:parent example:pebbles, example:bamn-bamn .
+    schema:parent example:pebbles, example:bamm-bamm .
 example:chip schema:name "Chip Rubble" ;
-    schema:parent example:pebbles, example:bamn-bamn .
+    schema:parent example:pebbles, example:bamm-bamm .
 ```
 
 It's fair to say that based on the above information, Roxy is a sibling of Chip, and vice versa. We can encode that in `mutant` using the following code
@@ -37,16 +37,16 @@ Which will produce the following output:
 @prefix example: <https://example.org/> .
 @prefix schema: <https://schema.org/> .
 
-example:bamn-bamn schema:name "Bamm-Bamm Rubble" .
+example:bamm-bamm schema:name "Bamm-Bamm Rubble" .
 
 example:chip schema:name "Chip Rubble" ;
-    schema:parent example:bamn-bamn, example:pebbles ;
+    schema:parent example:bamm-bamm, example:pebbles ;
     schema:sibling example:roxy .
 
 example:pebbles schema:name "Pebbles Flintstone" .
 
 example:roxy schema:name "Roxy Rubble" ;
-    schema:parent example:bamn-bamn, example:pebbles ;
+    schema:parent example:bamm-bamm, example:pebbles ;
     schema:sibling example:chip .
 ```
 
@@ -57,7 +57,7 @@ A more complex example with symmetric and inverse properties (`schema:spouse` an
 ### Hexastore
 
 The in-memory storage is based on a paper entitled [Hexastore: Sextuple Indexing for Semantic Web Data Management][1]. The paper proposes a bespoke storage format for RDF that exploits its simple triple structure. That is,
-it uses 6 indices that cover every permutation of subject (s), predicate (p) and object (o), and are conventially known by their initials: spo, pos, osp, sop, ops, pso.
+it uses 6 indices that cover every permutation of subject (s), predicate (p) and object (o), and are conventionally known by their initials: spo, pos, osp, sop, ops, pso.
 
 ### RDF*/Turtle*
 
@@ -73,7 +73,7 @@ In the paper [Foundations of an Alternative Approach to Reification in RDF][3], 
 4. `util`, `memory`, `engine`, `forward_reasoner`
 5. `memorywal`, `generic_rule`
 
-`mutant` is a proof of concept, and therefore, the modules aren't necessarily complete or completely coherant. For example, `memory` has support for blank nodes and reified statements, but the turtle serialiser would break miserably if you gave it a blank node.
+`mutant` is a proof of concept, and therefore, the modules aren't necessarily complete or completely coherent. For example, `memory` has support for blank nodes and reified statements, but the turtle serialiser would break miserably if you gave it a blank node.
 
 ### `memory`: In Memory Hexastore
 
@@ -106,7 +106,7 @@ But then, that store moves on. Records are added. Records are deleted.
 The only option right now is to dump the store again, and re-run the rules from the ground up. This seems rather wasteful and slow. Idea: Given the original dump, the rules, the original output and the new dump, calculate the delta between the original dump and the new dump and apply the rules based on the knowledge in the original output.
 
 ### Other ideas
-1. Allow hibrid files with a mix of triples and rules
+1. Allow hybrid files with a mix of triples and rules
 3. Include test cases along side rules.
 4. mutant-server
 
