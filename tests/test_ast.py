@@ -68,18 +68,28 @@ def test_TripleStatus():
 
 @pytest.mark.ast
 def test_Solution():
-    assert Solution({Variable("s"): ERIC_MILLER, Variable("p"): KNOWS, Variable("o"): DAVE_SMITH}, []) == Solution(
-        {Variable("s"): ERIC_MILLER, Variable("p"): KNOWS, Variable("o"): DAVE_SMITH}, []
+    assert Solution(
+        {Variable("s"): ERIC_MILLER, Variable("p"): KNOWS, Variable("o"): DAVE_SMITH},
+        [],
+        {(ERIC_MILLER, KNOWS, DAVE_SMITH)},
+    ) == Solution(
+        {Variable("s"): ERIC_MILLER, Variable("p"): KNOWS, Variable("o"): DAVE_SMITH},
+        [],
+        {(ERIC_MILLER, KNOWS, DAVE_SMITH)},
     )
 
     assert (
-        repr(Solution({Variable("s"): ERIC_MILLER}, []))
-        == "Solution({Variable(value='s'): IRI(value='http://example.com/eric-miller')})"
+        repr(Solution({Variable("s"): ERIC_MILLER}, [], {(ERIC_MILLER, KNOWS, DAVE_SMITH)}))
+        == "Solution({Variable(value='s'): IRI(value='http://example.com/eric-miller')}, ..., {(IRI(value='http://example.com/eric-miller'), IRI(value='http://xmlns.com/foaf/0.1/knows'), IRI(value='http://example.com/dave-smith'))})"
     )
 
 
 @pytest.mark.ast
 def test_Solution_lt():
-    assert Solution({Variable("s"): ERIC_MILLER, Variable("p"): KNOWS, Variable("o"): DAVE_SMITH}, []) < Solution(
-        {Variable("s"): DAVE_SMITH, Variable("p"): TYPE, Variable("o"): PERSON}, []
+    assert Solution(
+        {Variable("s"): ERIC_MILLER, Variable("p"): KNOWS, Variable("o"): DAVE_SMITH},
+        [],
+        {(ERIC_MILLER, KNOWS, DAVE_SMITH)},
+    ) < Solution(
+        {Variable("s"): DAVE_SMITH, Variable("p"): TYPE, Variable("o"): PERSON}, [], {(ERIC_MILLER, KNOWS, DAVE_SMITH)}
     )

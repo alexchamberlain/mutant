@@ -1,8 +1,8 @@
 import functools
-from typing import List, Dict, Union, Optional, Tuple, overload, TypeVar
+from typing import List, Dict, Union, Optional, Tuple, overload, TypeVar, AbstractSet
 
 from .ast import TYPE_ORDER, Order, Variable, OrderCondition
-from .typing import Term
+from .typing import Term, Triple
 
 T = TypeVar("T")
 
@@ -56,18 +56,31 @@ class Key:
 
 @functools.total_ordering
 class Solution:
-    def __init__(self, d: Dict[Variable, Term], o: List[OrderCondition]):
+    def __init__(self, d: Dict[Variable, Term], o: List[OrderCondition], triples: AbstractSet[Triple]):
         self._d = d
         self._o = o
+        self._triples = triples
+
+        assert all(len(t) == 3 for t in triples)
 
     def copy(self) -> "Solution":
-        return Solution(self._d.copy(), self._o)
+        return Solution(self._d.copy(), self._o, self._triples)
 
     def update(self, other: Union[Dict[Variable, Term], "Solution"]) -> None:
         if isinstance(other, Solution):
-            self._d.update(other._d)
+            # self._d.update(other._d)
+            self._triples.update(other._triples)
+
+            other_d = other._d
         else:
-            self._d.update(other)
+            # self._d.update(other)
+            other_d = other
+
+        for k, v in other_d.items():
+            if k in self._d:
+                assert self._d[k] == v
+
+            self._d[k] = v
 
     @overload
     def get(self, key: Variable, default: Term) -> Term:
@@ -94,14 +107,18 @@ class Solution:
     def variables(self):
         return self._d.keys()
 
+    @property
+    def triples(self):
+        return self._triples
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Solution):
-            return self._d == other._d
+            return self._d == other._d and self._triples == other._triples
         else:
             return self._d == other
 
     def __repr__(self) -> str:
-        return "Solution({!r})".format(self._d)
+        return "Solution({!r}, ..., {!r})".format(self._d, self._triples)
 
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, Solution):

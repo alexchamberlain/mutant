@@ -1,12 +1,11 @@
 import functools
-import operator
-from typing import Any, Sequence, Union, Tuple, Iterator, List, TYPE_CHECKING
+from typing import Any, Sequence, Union, Tuple, Iterator, List, TYPE_CHECKING, AbstractSet
 
 import attr
 
 from .ast import Variable, Order, IRI, OrderCondition
 from .model import Solution
-from .typing import Hexastore, Term
+from .typing import Hexastore, Triple, Term
 from .util import triple_map
 
 IS_NOT = IRI("http://example.org/isNot")
@@ -50,7 +49,7 @@ def execute(
     store: Hexastore, patterns: Sequence[TriplePattern], order_by: List[OrderCondition], bindings: Solution = None
 ) -> Sequence[Solution]:
     if bindings is None:
-        bindings = Solution({}, order_by)
+        bindings = Solution({}, order_by, set())
     engine_ = _Engine(store, order_by)
     return engine_(patterns, bindings)
 
@@ -72,7 +71,7 @@ class _Engine:
 
     def __call__(self, patterns: Sequence[TriplePattern], bindings: Solution) -> Sequence[Solution]:
         if not patterns:
-            return [Solution({}, self.order_by)]
+            return [Solution({}, self.order_by, set())]
 
         patterns = sorted(patterns, key=_count_variables)
 
@@ -97,13 +96,13 @@ class _Engine:
         if TYPE_CHECKING:
             assert isinstance(index_key, Tuple[int, int, int])
 
-        index = {
-            (SUBJECT, PREDICATE, OBJECT): self.store.spo,
-            (PREDICATE, OBJECT, SUBJECT): self.store.pos,
-            (OBJECT, SUBJECT, PREDICATE): self.store.osp,
-            (SUBJECT, OBJECT, PREDICATE): self.store.sop,
-            (OBJECT, PREDICATE, SUBJECT): self.store.ops,
-            (PREDICATE, SUBJECT, OBJECT): self.store.pso,
+        index, transform = {
+            (SUBJECT, PREDICATE, OBJECT): (self.store.spo, lambda t: t),
+            (PREDICATE, OBJECT, SUBJECT): (self.store.pos, lambda t: (t[2], t[0], t[1])),
+            (OBJECT, SUBJECT, PREDICATE): (self.store.osp, lambda t: (t[1], t[2], t[0])),
+            (SUBJECT, OBJECT, PREDICATE): (self.store.sop, lambda t: (t[0], t[2], t[1])),
+            (OBJECT, PREDICATE, SUBJECT): (self.store.ops, lambda t: (t[2], t[1], t[0])),
+            (PREDICATE, SUBJECT, OBJECT): (self.store.pso, lambda t: (t[1], t[0], t[2])),
         }[index_key]
 
         if isinstance(triple_pattern[0], VariableWithOrderInformation):
@@ -121,7 +120,7 @@ class _Engine:
                 for p, oid in po.items(order=order[1]):
                     for o, status in oid.items(order[2]):
                         if status.inserted:
-                            yield dzip(variables_3, (s, p, o), order_by=self.order_by)
+                            yield dzip(variables_3, (s, p, o), self.order_by, {transform((s, p, o))})
         elif isinstance(triple_pattern[1], VariableWithOrderInformation):
             s = triple_pattern[0]
             po = index[s]
@@ -129,7 +128,7 @@ class _Engine:
             for p, o_list in po.items(order=triple_pattern[1].order_by_direction):
                 for o, status in o_list.items(order=triple_pattern[2].order_by_direction):
                     if status.inserted:
-                        yield dzip(variables_2, (p, o), order_by=self.order_by)
+                        yield dzip(variables_2, (p, o), self.order_by, {transform((s, p, o))})
         elif isinstance(triple_pattern[2], VariableWithOrderInformation):
             s = triple_pattern[0]
             p = triple_pattern[1]
@@ -138,13 +137,13 @@ class _Engine:
             variables_1 = (triple_pattern[2].to_variable(),)
             for o, status in o_list.items(order=triple_pattern[2].order_by_direction):
                 if status.inserted:
-                    yield dzip(variables_1, (o,), order_by=self.order_by)
+                    yield dzip(variables_1, (o,), self.order_by, {transform((s, p, o))})
         else:
             s, p, o = triple_pattern
             po = index[s]
             o_list = po[p]
             if o in o_list and o_list[o].inserted:
-                yield Solution({}, self.order_by)
+                yield Solution({}, self.order_by, {transform(triple_pattern)})
 
 
 def _s(term: TermPattern, solution: Solution) -> TermPattern:
@@ -158,8 +157,10 @@ def _count_variables(pattern: TriplePattern) -> int:
     return sum(1 for t in pattern if isinstance(t, Variable))
 
 
-def dzip(variables: Sequence[Variable], values: Sequence[Term], order_by: List[OrderCondition]) -> Solution:
-    return Solution(dict(zip(variables, values)), order_by)
+def dzip(
+    variables: Sequence[Variable], values: Sequence[Term], order_by: List[OrderCondition], triples: AbstractSet[Triple]
+) -> Solution:
+    return Solution(dict(zip(variables, values)), order_by, triples)
 
 
 # def order_index(order_by: Sequence[OrderCondition], x: ):

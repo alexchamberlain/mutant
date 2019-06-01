@@ -121,39 +121,32 @@ class GeneralRule1:
 
     def __call__(self, store, s, p, o):
         logger.debug(f"Applying {self} to {s}, {p}, {o}")
-        for s, os in store.pso[p].items():
-            if isinstance(self._s, Variable):
-                s_solution = Solution({self._s: s}, [])
-            elif s != self._s:
-                continue
-            else:
-                s_solution = Solution({self._s: s}, [])
 
-            for o, status in os.items():
-                if not status.inserted:
-                    continue
+        if isinstance(self._s, Variable):
+            solution = Solution({self._s: s}, [], {(s, p, o)})
+        elif s != self._s:
+            return
+        else:
+            solution = Solution({}, [], {(s, p, o)})
 
-                if isinstance(self._o, Variable):
-                    solution = s_solution.copy()
-                    solution.update({self._o: o})
-                elif o != self._o:
-                    continue
-                else:
-                    solution = s_solution
+        if isinstance(self._o, Variable):
+            solution.update({self._o: o})
+        elif o != self._o:
+            return
 
-                constraints_pass = True
-                for constraint in self._constraints:
-                    if not constraint(solution):
-                        constraints_pass = False
-                        break
+        constraints_pass = True
+        for constraint in self._constraints:
+            if not constraint(solution):
+                constraints_pass = False
+                break
 
-                if not constraints_pass:
-                    continue
+        if not constraints_pass:
+            return
 
-                for triple_pattern in self._head:
-                    triple = _resolve(triple_pattern, solution)
-                    logger.debug(f"triple {triple}")
-                    store.insert(triple, self._inferred_from + ((s, p, o),))
+        for triple_pattern in self._head:
+            triple = _resolve(triple_pattern, solution)
+            logger.debug(f"triple {triple}")
+            store.insert(triple, self._inferred_from + ((s, p, o),))
 
 
 class RecursiveRule1:
@@ -195,42 +188,35 @@ class RecursiveRule1:
 
     def __call__(self, store, s, p, o):
         logger.debug(f"Applying {self} to {s}, {p}, {o}")
-        for s, os in store.pso[p].items():
-            if isinstance(self._s, Variable):
-                s_solution = Solution({self._s: s}, [])
-            elif s != self._s:
-                continue
-            else:
-                s_solution = Solution({self._s: s}, [])
 
-            for o, status in os.items():
-                if not status.inserted:
-                    continue
+        if isinstance(self._s, Variable):
+            solution = Solution({self._s: s}, [], {(s, p, o)})
+        elif s != self._s:
+            return
+        else:
+            solution = Solution({}, [], {(s, p, o)})
 
-                if isinstance(self._o, Variable):
-                    solution = s_solution.copy()
-                    solution.update({self._o: o})
-                elif o != self._o:
-                    continue
-                else:
-                    solution = s_solution
+        if isinstance(self._o, Variable):
+            solution.update({self._o: o})
+        elif o != self._o:
+            return
 
-                constraints_pass = True
-                for constraint in self._constraints:
-                    if not constraint(solution):
-                        constraints_pass = False
-                        break
+        constraints_pass = True
+        for constraint in self._constraints:
+            if not constraint(solution):
+                constraints_pass = False
+                break
 
-                if not constraints_pass:
-                    continue
+        if not constraints_pass:
+            return
 
-                for head in self._head:
-                    new_rule = Rule(
-                        _resolve_patterns(head.body, solution),
-                        _resolve_constraints(head.constraints, solution),
-                        _resolve_patterns(head.head, solution),
-                    )
-                    _register_rule(new_rule, store.register_predicate_rule, self._inferred_from + ((s, p, o),))
+        for head in self._head:
+            new_rule = Rule(
+                _resolve_patterns(head.body, solution),
+                _resolve_constraints(head.constraints, solution),
+                _resolve_patterns(head.head, solution),
+            )
+            _register_rule(new_rule, store.register_predicate_rule, self._inferred_from + ((s, p, o),))
 
 
 class GeneralRuleMany:
@@ -276,43 +262,38 @@ class GeneralRuleMany:
 
     def __call__(self, store, s, p, o):
         logger.debug(f"Applying {self} to {s}, {p}, {o}")
-        for s, os in store.pso[p].items():
-            if isinstance(self._s, Variable):
-                s_solution = Solution({self._s: s}, [])
-            elif s != self._s:
+
+        if isinstance(self._s, Variable):
+            solution = Solution({self._s: s}, [], {(s, p, o)})
+        elif s != self._s:
+            return
+        else:
+            solution = Solution({}, [], {(s, p, o)})
+
+        if isinstance(self._o, Variable):
+            solution.update({self._o: o})
+        elif o != self._o:
+            return
+
+        patterns = [_resolve(triple_pattern, solution) for triple_pattern in self._rest]
+        logger.debug(f"patterns {patterns}")
+        solutions = engine.execute(store, patterns, [], solution)
+
+        for s in solutions:
+            constraints_pass = True
+            for constraint in self._constraints:
+                if not constraint(s):
+                    constraints_pass = False
+                    break
+
+            if not constraints_pass:
                 continue
-            else:
-                s_solution = Solution({self._s: s}, [])
 
-            for o, status in os.items():
-                if not status.inserted:
-                    continue
+            logger.debug(f"s {s}")
 
-                if isinstance(self._o, Variable):
-                    solution = s_solution.copy()
-                    solution.update({self._o: o})
-                elif o != self._o:
-                    continue
-                else:
-                    solution = s_solution
-
-                patterns = [_resolve(triple_pattern, solution) for triple_pattern in self._rest]
-                logger.debug(f"patterns {patterns}")
-                solutions = engine.execute(store, patterns, [], solution)
-
-                for solution in solutions:
-                    constraints_pass = True
-                    for constraint in self._constraints:
-                        if not constraint(solution):
-                            constraints_pass = False
-                            break
-
-                    if not constraints_pass:
-                        continue
-
-                    for triple_pattern in self._head:
-                        triple = _resolve(triple_pattern, solution)
-                        store.insert(triple, self._inferred_from + ((s, p, o),))
+            for triple_pattern in self._head:
+                triple = _resolve(triple_pattern, s)
+                store.insert(triple, self._inferred_from + tuple(s.triples))
 
 
 def _resolve_patterns(patterns, solution):

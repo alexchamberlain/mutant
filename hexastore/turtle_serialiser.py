@@ -1,4 +1,9 @@
+from collections import defaultdict
+import decimal
+
 from .ast import IRI, BlankNode
+
+TYPE = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
 
 
 def serialise(store, fo, namespaces):
@@ -10,32 +15,64 @@ class _Serialiser:
     def __init__(self, store, namespaces):
         self._store = store
         self._namespaces = namespaces
-        self._terms = {t: self._serialise_term(t) for t in store.terms() if not isinstance(t, BlankNode)}
+        self._blank_node_counter = 1
+        self._terms = {t: self._serialise_term(t) for t in store.terms()}
+
+        self._stats = defaultdict(Stat)
 
     def __call__(self, fo):
         for n, i in self._namespaces:
             fo.write(f"@prefix {n}: <{i.value}> .\n")
         fo.write("\n")
 
-        for s, po in self._store.spo.items():
-            if isinstance(s, BlankNode):
-                # Skip reified statements
+        for s, p, o in self._store.triples():
+            self._stats[o].increment()
+
+        for s, po in _reorder(self._store.spo.items()):
+            if isinstance(s, BlankNode) and self._stats[s].references == 1:
                 continue
 
-            ps = [self._serialise_predicate_object_list(p, os) for p, os in po.items()]
-            pss = " ;\n    ".join(ps)
-
+            pss = self._serialise_triple(s, po)
             if pss:
-                fo.write(f"{self._terms[s]} {pss} .\n\n")
+                fo.write(f"{pss} .\n\n")
+
+    def _serialise_triple(self, s, po):
+        ps = []
+
+        if TYPE in po:
+            ps += [self._serialise_predicate_object_list(TYPE, po[TYPE])]
+
+        ps += [self._serialise_predicate_object_list(p, os) for p, os in po.items() if p != TYPE]
+        pss = " ;\n    ".join(ps)
+
+        if pss:
+            return f"{self._terms[s]} {pss}"
 
     def _serialise_predicate_object_list(self, p, os):
-        objs = [self._terms[o] for o, status in os.items() if status.inserted]
+        objs = [self._serialise_object(o) for o, status in os.items() if status.inserted]
         o = ", ".join(objs)
 
         return f"{self._terms[p]} {o}" if o else ""
 
+    def _serialise_object(self, o):
+        if isinstance(o, BlankNode) and self._stats[o].references == 1:
+            po = self._store.spo[o]
+            ps = []
+
+            if TYPE in po:
+                ps += [self._serialise_predicate_object_list(TYPE, po[TYPE])]
+
+            ps += [self._serialise_predicate_object_list(p, os) for p, os in po.items() if p != TYPE]
+            pss = " ;\n    ".join(ps)
+
+            return f"[\n        {pss}\n    ]"
+        else:
+            return self._terms[o]
+
     def _serialise_term(self, t):
-        if isinstance(t, IRI):
+        if t == TYPE:
+            return "a"
+        elif isinstance(t, IRI):
             # TODO: Make this better
             for n, i in self._namespaces:
                 if t.value.startswith(i.value):
@@ -43,12 +80,42 @@ class _Serialiser:
             return f"<{t.value}>"
         elif isinstance(t, str):
             return f'"{t}"'
-        elif isinstance(t, int):
-            return f"{t}"
+        elif isinstance(t, int) or isinstance(t, decimal.Decimal):
+            return str(t)
         elif isinstance(t, tuple) and len(t) == 3:
             return f"<< {self._serialise_term(t[0])} {self._serialise_term(t[1])} {self._serialise_term(t[2])} >>"
+        elif isinstance(t, BlankNode):
+            s = f"_:{self._blank_node_counter}"
+            self._blank_node_counter += 1
+            return s
         else:
             import pdb
 
             pdb.set_trace()
             raise TypeError(f"Unknown type {type(t)} ({t})")
+
+
+def _reorder(iter_):
+    iter_ = iter(iter_)
+    reified_statements = []
+    for s, po in iter_:
+        if not isinstance(s, tuple):
+            break
+
+        reified_statements.append((s, po))
+
+    yield s, po
+    yield from iter_
+    yield from iter(reified_statements)
+
+
+class Stat:
+    def __init__(self):
+        self._references = 0
+
+    def increment(self):
+        self._references += 1
+
+    @property
+    def references(self):
+        return self._references

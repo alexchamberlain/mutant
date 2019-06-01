@@ -23,14 +23,13 @@ def test_Key():
 
 @pytest.mark.model
 def test_Solution():
-    s = Solution({Variable("A"): A}, [])
+    s = Solution({Variable("A"): A}, [], set())
 
     assert s.copy() is not s
     assert s.copy() == s
 
     sp = s.copy()
-    sp.update({Variable("A"): C, Variable("B"): B})
+    sp.update({Variable("B"): B})
 
     assert s != sp
-    assert sp.get(Variable("A")) == C
     assert sp.get(Variable("B")) == B

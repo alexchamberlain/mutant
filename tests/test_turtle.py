@@ -333,11 +333,11 @@ def test_turtleX_example_3_serialise():
         @prefix foaf: <http://xmlns.com/foaf/0.1/> .
         @prefix dct: <http://purl.org/dc/elements/1.1/> .
 
-        << :bob foaf:age 23 >> dct:creator <http://example.com/crawlers#c1> ;
-            dct:source <http://example.net/homepage-listing.html> .
-
         :bob foaf:age 23 ;
             foaf:name "Bob" .
+
+        << :bob foaf:age 23 >> dct:creator <http://example.com/crawlers#c1> ;
+            dct:source <http://example.net/homepage-listing.html> .
 
     """
         ).lstrip()

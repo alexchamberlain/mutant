@@ -1,5 +1,7 @@
 @prefix schema: <https://schema.org/> .
 @prefix example: <https://example.org/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 
 example:pebbles schema:name "Pebbles Flintstone" .
 example:bamn-bamn schema:name "Bamm-Bamm Rubble" .
