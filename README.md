@@ -1,5 +1,7 @@
 # Mutant
 
+<p align="center"><img src="./assets/logo.svg" alt="mutant logo" height="100" style="max-width:100%"></p>
+
 A forward reasoning logic language for RDF.
 
 ## Example
