@@ -1,7 +1,7 @@
 import pytest
 
 from hexastore.ast import IRI, TripleStatus, TripleStatusItem, BlankNode
-from hexastore.memory import InMemoryHexastore
+from hexastore.memory import InMemoryHexastore, TrunkPayload
 
 
 DAVE_SMITH = IRI("http://example.com/dave-smith")
@@ -111,84 +111,104 @@ def _make_status(index, valid_to=None):
 @pytest.mark.memory
 def test_spo(store):
     assert store.spo == {
-        DAVE_SMITH: {
-            TYPE: {PERSON: _make_status(0)},
-            NAME: {"Dave Smith": _make_status(1)},
-            KNOWS: {ERIC_MILLER: _make_status(6)},
-        },
-        ERIC_MILLER: {
-            TYPE: {PERSON: _make_status(2)},
-            NAME: {"Eric Miller": _make_status(3)},
-            KNOWS: {DAVE_SMITH: _make_status(7)},
-            MBOX: {ERIC_MILLER_MBOX: _make_status(4)},
-            TITLE: {"Dr": _make_status(5)},
-        },
+        DAVE_SMITH: TrunkPayload(
+            {
+                TYPE: {PERSON: _make_status(0)},
+                NAME: {"Dave Smith": _make_status(1)},
+                KNOWS: {ERIC_MILLER: _make_status(6)},
+            },
+            3,
+        ),
+        ERIC_MILLER: TrunkPayload(
+            {
+                TYPE: {PERSON: _make_status(2)},
+                NAME: {"Eric Miller": _make_status(3)},
+                KNOWS: {DAVE_SMITH: _make_status(7)},
+                MBOX: {ERIC_MILLER_MBOX: _make_status(4)},
+                TITLE: {"Dr": _make_status(5)},
+            },
+            5,
+        ),
     }
 
 
 @pytest.mark.memory
 def test_sop(store):
     assert store.sop == {
-        DAVE_SMITH: {
-            PERSON: {TYPE: _make_status(0)},
-            "Dave Smith": {NAME: _make_status(1)},
-            ERIC_MILLER: {KNOWS: _make_status(6)},
-        },
-        ERIC_MILLER: {
-            "Dr": {TITLE: _make_status(5)},
-            "Eric Miller": {NAME: _make_status(3)},
-            DAVE_SMITH: {KNOWS: _make_status(7)},
-            ERIC_MILLER_MBOX: {MBOX: _make_status(4)},
-            PERSON: {TYPE: _make_status(2)},
-        },
+        DAVE_SMITH: TrunkPayload(
+            {
+                PERSON: {TYPE: _make_status(0)},
+                "Dave Smith": {NAME: _make_status(1)},
+                ERIC_MILLER: {KNOWS: _make_status(6)},
+            },
+            3,
+        ),
+        ERIC_MILLER: TrunkPayload(
+            {
+                "Dr": {TITLE: _make_status(5)},
+                "Eric Miller": {NAME: _make_status(3)},
+                DAVE_SMITH: {KNOWS: _make_status(7)},
+                ERIC_MILLER_MBOX: {MBOX: _make_status(4)},
+                PERSON: {TYPE: _make_status(2)},
+            },
+            5,
+        ),
     }
 
 
 @pytest.mark.memory
 def test_pos(store):
     assert store.pos == {
-        KNOWS: {ERIC_MILLER: {DAVE_SMITH: _make_status(6)}, DAVE_SMITH: {ERIC_MILLER: _make_status(7)}},
-        MBOX: {ERIC_MILLER_MBOX: {ERIC_MILLER: _make_status(4)}},
-        NAME: {"Dave Smith": {DAVE_SMITH: _make_status(1)}, "Eric Miller": {ERIC_MILLER: _make_status(3)}},
-        TITLE: {"Dr": {ERIC_MILLER: _make_status(5)}},
-        TYPE: {PERSON: {DAVE_SMITH: _make_status(0), ERIC_MILLER: _make_status(2)}},
+        KNOWS: TrunkPayload(
+            {ERIC_MILLER: {DAVE_SMITH: _make_status(6)}, DAVE_SMITH: {ERIC_MILLER: _make_status(7)}}, 2
+        ),
+        MBOX: TrunkPayload({ERIC_MILLER_MBOX: {ERIC_MILLER: _make_status(4)}}, 1),
+        NAME: TrunkPayload(
+            {"Dave Smith": {DAVE_SMITH: _make_status(1)}, "Eric Miller": {ERIC_MILLER: _make_status(3)}}, 2
+        ),
+        TITLE: TrunkPayload({"Dr": {ERIC_MILLER: _make_status(5)}}, 1),
+        TYPE: TrunkPayload({PERSON: {DAVE_SMITH: _make_status(0), ERIC_MILLER: _make_status(2)}}, 2),
     }
 
 
 @pytest.mark.memory
 def test_pso(store):
     assert store.pso == {
-        KNOWS: {ERIC_MILLER: {DAVE_SMITH: _make_status(7)}, DAVE_SMITH: {ERIC_MILLER: _make_status(6)}},
-        MBOX: {ERIC_MILLER: {ERIC_MILLER_MBOX: _make_status(4)}},
-        NAME: {DAVE_SMITH: {"Dave Smith": _make_status(1)}, ERIC_MILLER: {"Eric Miller": _make_status(3)}},
-        TITLE: {ERIC_MILLER: {"Dr": _make_status(5)}},
-        TYPE: {DAVE_SMITH: {PERSON: _make_status(0)}, ERIC_MILLER: {PERSON: _make_status(2)}},
+        KNOWS: TrunkPayload(
+            {ERIC_MILLER: {DAVE_SMITH: _make_status(7)}, DAVE_SMITH: {ERIC_MILLER: _make_status(6)}}, 2
+        ),
+        MBOX: TrunkPayload({ERIC_MILLER: {ERIC_MILLER_MBOX: _make_status(4)}}, 1),
+        NAME: TrunkPayload(
+            {DAVE_SMITH: {"Dave Smith": _make_status(1)}, ERIC_MILLER: {"Eric Miller": _make_status(3)}}, 2
+        ),
+        TITLE: TrunkPayload({ERIC_MILLER: {"Dr": _make_status(5)}}, 1),
+        TYPE: TrunkPayload({DAVE_SMITH: {PERSON: _make_status(0)}, ERIC_MILLER: {PERSON: _make_status(2)}}, 2),
     }
 
 
 @pytest.mark.memory
 def test_osp(store):
     assert store.osp == {
-        "Dave Smith": {DAVE_SMITH: {NAME: _make_status(1)}},
-        "Dr": {ERIC_MILLER: {TITLE: _make_status(5)}},
-        "Eric Miller": {ERIC_MILLER: {NAME: _make_status(3)}},
-        DAVE_SMITH: {ERIC_MILLER: {KNOWS: _make_status(7)}},
-        ERIC_MILLER: {DAVE_SMITH: {KNOWS: _make_status(6)}},
-        ERIC_MILLER_MBOX: {ERIC_MILLER: {MBOX: _make_status(4)}},
-        PERSON: {DAVE_SMITH: {TYPE: _make_status(0)}, ERIC_MILLER: {TYPE: _make_status(2)}},
+        "Dave Smith": TrunkPayload({DAVE_SMITH: {NAME: _make_status(1)}}, 1),
+        "Dr": TrunkPayload({ERIC_MILLER: {TITLE: _make_status(5)}}, 1),
+        "Eric Miller": TrunkPayload({ERIC_MILLER: {NAME: _make_status(3)}}, 1),
+        DAVE_SMITH: TrunkPayload({ERIC_MILLER: {KNOWS: _make_status(7)}}, 1),
+        ERIC_MILLER: TrunkPayload({DAVE_SMITH: {KNOWS: _make_status(6)}}, 1),
+        ERIC_MILLER_MBOX: TrunkPayload({ERIC_MILLER: {MBOX: _make_status(4)}}, 1),
+        PERSON: TrunkPayload({DAVE_SMITH: {TYPE: _make_status(0)}, ERIC_MILLER: {TYPE: _make_status(2)}}, 2),
     }
 
 
 @pytest.mark.memory
 def test_ops(store):
     assert store.ops == {
-        "Dave Smith": {NAME: {DAVE_SMITH: _make_status(1)}},
-        "Dr": {TITLE: {ERIC_MILLER: _make_status(5)}},
-        "Eric Miller": {NAME: {ERIC_MILLER: _make_status(3)}},
-        DAVE_SMITH: {KNOWS: {ERIC_MILLER: _make_status(7)}},
-        ERIC_MILLER: {KNOWS: {DAVE_SMITH: _make_status(6)}},
-        ERIC_MILLER_MBOX: {MBOX: {ERIC_MILLER: _make_status(4)}},
-        PERSON: {TYPE: {DAVE_SMITH: _make_status(0), ERIC_MILLER: _make_status(2)}},
+        "Dave Smith": TrunkPayload({NAME: {DAVE_SMITH: _make_status(1)}}, 1),
+        "Dr": TrunkPayload({TITLE: {ERIC_MILLER: _make_status(5)}}, 1),
+        "Eric Miller": TrunkPayload({NAME: {ERIC_MILLER: _make_status(3)}}, 1),
+        DAVE_SMITH: TrunkPayload({KNOWS: {ERIC_MILLER: _make_status(7)}}, 1),
+        ERIC_MILLER: TrunkPayload({KNOWS: {DAVE_SMITH: _make_status(6)}}, 1),
+        ERIC_MILLER_MBOX: TrunkPayload({MBOX: {ERIC_MILLER: _make_status(4)}}, 1),
+        PERSON: TrunkPayload({TYPE: {DAVE_SMITH: _make_status(0), ERIC_MILLER: _make_status(2)}}, 2),
     }
 
 

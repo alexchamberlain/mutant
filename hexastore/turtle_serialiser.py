@@ -1,4 +1,5 @@
 from collections import defaultdict
+from dataclasses import dataclass
 import decimal
 
 from .ast import IRI, BlankNode
@@ -48,21 +49,23 @@ class _Serialiser:
         if pss:
             return f"{self._terms[s]} {pss}"
 
-    def _serialise_predicate_object_list(self, p, os):
-        objs = [self._serialise_object(o) for o, status in os.items() if status.inserted]
+    def _serialise_predicate_object_list(self, p, os, level=1):
+        assert level < 10
+
+        objs = [self._serialise_object(o, level) for o, status in os.items() if status.inserted]
         o = ", ".join(objs)
 
         return f"{self._terms[p]} {o}" if o else ""
 
-    def _serialise_object(self, o):
+    def _serialise_object(self, o, level):
         if isinstance(o, BlankNode) and self._stats[o].references == 1:
             po = self._store.spo[o]
             ps = []
 
             if TYPE in po:
-                ps += [self._serialise_predicate_object_list(TYPE, po[TYPE])]
+                ps += [self._serialise_predicate_object_list(TYPE, po[TYPE], level + 1)]
 
-            ps += [self._serialise_predicate_object_list(p, os) for p, os in po.items() if p != TYPE]
+            ps += [self._serialise_predicate_object_list(p, os, level + 1) for p, os in po.items() if p != TYPE]
             pss = " ;\n    ".join(ps)
 
             return f"[\n        {pss}\n    ]"
@@ -109,13 +112,9 @@ def _reorder(iter_):
     yield from iter(reified_statements)
 
 
+@dataclass
 class Stat:
-    def __init__(self):
-        self._references = 0
+    references: int = 0
 
     def increment(self):
-        self._references += 1
-
-    @property
-    def references(self):
-        return self._references
+        self.references += 1
