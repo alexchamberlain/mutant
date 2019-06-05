@@ -287,9 +287,8 @@ class GeneralRuleMany:
                     break
 
             if not constraints_pass:
+                logger.debug(f"Skipping s={s}")
                 continue
-
-            logger.debug(f"s {s}")
 
             for triple_pattern in self._head:
                 triple = _resolve(triple_pattern, s)
