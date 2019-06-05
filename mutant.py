@@ -14,8 +14,8 @@ from hexastore.default_forward_reasoner import default_forward_reasoner
 logger = logging.getLogger(__name__)
 
 
-# root = logging.getLogger()
-# root.setLevel(logging.DEBUG)
+root = logging.getLogger()
+root.setLevel(logging.DEBUG)
 
 # handler = logging.StreamHandler(sys.stdout)
 # handler.setLevel(logging.DEBUG)
@@ -25,8 +25,14 @@ logger = logging.getLogger(__name__)
 
 
 @click.group()
-def cli():
-    pass
+@click.option("-l", "--log-file")
+def cli(log_file):
+    if log_file:
+        handler = logging.FileHandler(log_file)
+        handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        handler.setFormatter(formatter)
+        root.addHandler(handler)
 
 
 @cli.command()
