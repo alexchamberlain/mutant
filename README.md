@@ -111,6 +111,7 @@ The only option right now is to dump the store again, and re-run the rules from 
 1. Allow hybrid files with a mix of triples and rules
 3. Include test cases along side rules.
 4. mutant-server
+5. Push constraints down from generic rule implementations to `engine`.
 
 ## Why Python?
 
