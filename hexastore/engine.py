@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import functools
 from typing import Any, Sequence, Union, Tuple, Iterator, List, TYPE_CHECKING, AbstractSet
 
@@ -61,6 +62,7 @@ class _Engine:
 
         self.variable_map = {c.variable_name: (i, c.direction) for i, c in enumerate(order_by)}
         self.len_order_by = len(order_by)
+        self.stats = Stats()
 
     def _preprocess_term(self, term: TermPattern) -> TermPatternPrime:
         if isinstance(term, Variable):
@@ -81,7 +83,7 @@ class _Engine:
             solutions = list(self._process_pattern(triple_pattern, solutions))
 
         # TODO: Can we reorg the algorithm above so that solutions is already sorted?
-        return sorted(solutions)
+        return sorted(solutions), self.stats
 
     def _process_pattern(self, triple_pattern: TriplePattern, solutions: Sequence[Solution]) -> Iterator[Solution]:
         for s in solutions:
@@ -119,6 +121,7 @@ class _Engine:
             for s, po in index.items(order=order[0]):
                 for p, oid in po.items(order=order[1]):
                     for o, status in oid.items(order[2]):
+                        self.stats.increment_triples()
                         if status.inserted:
                             yield dzip(variables_3, (s, p, o), self.order_by, {transform((s, p, o))})
         elif isinstance(triple_pattern[1], VariableWithOrderInformation):
@@ -127,6 +130,7 @@ class _Engine:
             variables_2 = (triple_pattern[1].to_variable(), triple_pattern[2].to_variable())
             for p, o_list in po.items(order=triple_pattern[1].order_by_direction):
                 for o, status in o_list.items(order=triple_pattern[2].order_by_direction):
+                    self.stats.increment_triples()
                     if status.inserted:
                         yield dzip(variables_2, (p, o), self.order_by, {transform((s, p, o))})
         elif isinstance(triple_pattern[2], VariableWithOrderInformation):
@@ -136,12 +140,14 @@ class _Engine:
             o_list = po[p]
             variables_1 = (triple_pattern[2].to_variable(),)
             for o, status in o_list.items(order=triple_pattern[2].order_by_direction):
+                self.stats.increment_triples()
                 if status.inserted:
                     yield dzip(variables_1, (o,), self.order_by, {transform((s, p, o))})
         else:
             s, p, o = triple_pattern
             po = index[s]
             o_list = po[p]
+            self.stats.increment_triples()
             if o in o_list and o_list[o].inserted:
                 yield Solution({}, self.order_by, {transform(triple_pattern)})
 
@@ -175,3 +181,11 @@ class _Merge:
         z = self.lhs.copy()
         z.update(rhs)
         return z
+
+
+@dataclass
+class Stats:
+    triples_visited: int = 0
+
+    def increment_triples(self):
+        self.triples_visited += 1

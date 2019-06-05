@@ -4,7 +4,7 @@ import pytest
 
 from hexastore.ast import IRI, Variable, OrderCondition, Order
 from hexastore.memory import InMemoryHexastore
-from hexastore.engine import execute
+from hexastore.engine import execute, Stats
 
 
 DAVE_SMITH = IRI("http://example.com/dave-smith")
@@ -46,11 +46,13 @@ def store():
 
 @pytest.mark.engine
 def test_engine_with_order(store):
-    assert execute(
+    solutions, stats = execute(
         store,
         [(Variable("s"), Variable("p"), Variable("o"))],
         [OrderCondition("s", Order.DESCENDING), OrderCondition("p", Order.ASCENDING)],
-    ) == [
+    )
+
+    assert solutions == [
         {Variable("s"): W3, Variable("p"): TYPE, Variable("o"): ORGANIZATION},
         {Variable("s"): W3, Variable("p"): NAME, Variable("o"): "W3"},
         {Variable("s"): ERIC_MILLER, Variable("p"): TYPE, Variable("o"): PERSON},
@@ -64,10 +66,19 @@ def test_engine_with_order(store):
         {Variable("s"): DAVE_SMITH, Variable("p"): NAME, Variable("o"): "Dave Smith"},
     ]
 
+    # In this case, we ask for all triples, so we should visit each triple once.
+    assert stats.triples_visited == len(solutions)
+
 
 @pytest.mark.engine
 def test_engine_2_patterns(store):
-    assert execute(store, [(Variable("person"), TYPE, PERSON), (Variable("person"), NAME, Variable("name"))], []) == [
+    solutions, stats = execute(
+        store, [(Variable("person"), TYPE, PERSON), (Variable("person"), NAME, Variable("name"))], []
+    )
+
+    print(stats)
+
+    assert solutions == [
         {Variable("person"): DAVE_SMITH, Variable("name"): "Dave Smith"},
         {Variable("person"): ERIC_MILLER, Variable("name"): "Eric Miller"},
     ]
@@ -75,11 +86,15 @@ def test_engine_2_patterns(store):
 
 @pytest.mark.engine
 def test_engine_2_patterns_with_order(store):
-    assert execute(
+    solutions, stats = execute(
         store,
         [(Variable("person"), TYPE, PERSON), (Variable("person"), NAME, Variable("name"))],
         [OrderCondition("name", Order.DESCENDING)],
-    ) == [
+    )
+
+    print(stats)
+
+    assert solutions == [
         {Variable("person"): ERIC_MILLER, Variable("name"): "Eric Miller"},
         {Variable("person"): DAVE_SMITH, Variable("name"): "Dave Smith"},
     ]

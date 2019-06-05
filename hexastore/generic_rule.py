@@ -277,7 +277,7 @@ class GeneralRuleMany:
 
         patterns = [_resolve(triple_pattern, solution) for triple_pattern in self._rest]
         logger.debug(f"patterns {patterns}")
-        solutions = engine.execute(store, patterns, [], solution)
+        solutions, stats = engine.execute(store, patterns, [], solution)
 
         for s in solutions:
             constraints_pass = True
@@ -294,6 +294,8 @@ class GeneralRuleMany:
             for triple_pattern in self._head:
                 triple = _resolve(triple_pattern, s)
                 store.insert(triple, self._inferred_from + tuple(s.triples))
+
+        logger.debug(f"Applied {self} to {s}, {p}, {o}; len(solutions)={len(solutions)}, stats={stats}")
 
 
 def _resolve_patterns(patterns, solution):
