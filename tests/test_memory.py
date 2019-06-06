@@ -322,6 +322,57 @@ def store_family_tree():
     return hexastore
 
 
+@pytest.fixture
+def store_family_tree_bulk():
+    hexastore = InMemoryHexastore()
+    hexastore.bulk_insert([(A, SPOUSE, B), (B, SPOUSE, A), ((B, SPOUSE, A), INFERRED_FROM, (A, SPOUSE, B))], 1)
+    hexastore.bulk_insert([(C, PARENT, A), (A, CHILDREN, C), ((A, CHILDREN, C), INFERRED_FROM, (C, PARENT, A))], 2)
+    hexastore.bulk_insert([(C, PARENT, B), (B, CHILDREN, C), ((B, CHILDREN, C), INFERRED_FROM, (C, PARENT, B))], 3)
+
+    node1 = BlankNode()
+    node2 = BlankNode()
+    hexastore.bulk_insert(
+        [
+            (D, PARENT, A),
+            (A, CHILDREN, D),
+            (C, SIBLING, D),
+            (D, SIBLING, C),
+            ((A, CHILDREN, D), INFERRED_FROM, (D, PARENT, A)),
+            (node1, TYPE, BAG),
+            ((C, SIBLING, D), INFERRED_FROM, node1),
+            (node1, _li(1), (D, PARENT, A)),
+            (node1, _li(2), (C, PARENT, A)),
+            (node2, TYPE, BAG),
+            ((D, SIBLING, C), INFERRED_FROM, node2),
+            (node2, _li(1), (D, PARENT, A)),
+            (node2, _li(2), (C, PARENT, A)),
+        ],
+        4,
+    )
+
+    node3 = BlankNode()
+    node4 = BlankNode()
+
+    hexastore.bulk_insert(
+        [
+            (D, PARENT, B),
+            (B, CHILDREN, D),
+            ((B, CHILDREN, D), INFERRED_FROM, (D, PARENT, B)),
+            (node3, TYPE, BAG),
+            ((C, SIBLING, D), INFERRED_FROM, node3),
+            (node3, _li(1), (D, PARENT, B)),
+            (node3, _li(2), (C, PARENT, B)),
+            (node4, TYPE, BAG),
+            ((D, SIBLING, C), INFERRED_FROM, node4),
+            (node4, _li(1), (D, PARENT, B)),
+            (node4, _li(2), (C, PARENT, B)),
+        ],
+        5,
+    )
+
+    return hexastore
+
+
 def _li(n: int):
     return IRI(f"http://www.w3.org/1999/02/22-rdf-syntax-ns#_{n}")
 
@@ -329,3 +380,8 @@ def _li(n: int):
 @pytest.mark.memory
 def test_store_family_tree(store_family_tree):
     assert len(store_family_tree) == 33
+
+
+@pytest.mark.memory
+def test_store_family_tree_bulk(store_family_tree_bulk):
+    assert len(store_family_tree_bulk) == 33

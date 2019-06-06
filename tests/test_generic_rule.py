@@ -14,12 +14,20 @@ B = IRI("http://example.com/B")
 C = IRI("http://example.com/C")
 D = IRI("http://example.com/D")
 
+FOO = IRI("http://example.com/Foo")
+BAR = IRI("http://example.com/Bar")
+
 SIBLING = IRI("https://schema.org/sibling")
 PARENT = IRI("https://schema.org/parent")
 SPOUSE = IRI("https://schema.org/spouse")
+NAME = IRI("https://schema.org/name")
+PERSON = IRI("https://schema.org/Person")
+ORGANISATION = IRI("https://schema.org/Organisation")
 
 SYMMETRIC_PROPERTY = IRI("http://www.w3.org/2002/07/owl#SymmetricProperty")
 TYPE = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
+RESOURCE = IRI("http://www.w3.org/2000/01/rdf-schema#Resource")
+SUBCLASS_OF = IRI("http://www.w3.org/2000/01/rdf-schema#subclassOf")
 INFERRED_FROM = IRI("https://example.com/inferred_from")
 
 
@@ -241,3 +249,69 @@ def test_symmetric_register():
     reasoner.insert(A, SPOUSE, B, 1)
 
     assert (B, SPOUSE, A) in store
+
+
+@pytest.mark.generic_rule
+@pytest.mark.xfail
+def test_recursive_recursive_rule_fails():
+    document = """
+        @prefix example: <http://example.com/> .
+        @prefix schema: <https://schema.org/> .
+
+        ($s a example:Widget) → (
+            ($p a example:WeirdProperty) → (
+                ($s $p $o) → ($o $p $o) .
+            ) .
+        ) .
+    """
+
+    store = InMemoryHexastore()
+    reasoner = ForwardReasoner(store)
+
+    generic_rule.parse_and_register(document, reasoner)
+
+
+@pytest.mark.generic_rule
+def test_fixed_subject():
+    """This rule is arbitrary, as I can't think of a legit
+    use case for this."""
+
+    document = """
+        @prefix example: <http://example.com/> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+        (example:A a $o) → ($o rdfs:subclassOf rdfs:Resource) .
+    """
+
+    store = InMemoryHexastore()
+    reasoner = ForwardReasoner(store)
+
+    generic_rule.parse_and_register(document, reasoner)
+
+    reasoner.insert(A, TYPE, FOO, 1)
+    reasoner.insert(B, TYPE, BAR, 1)
+
+    assert (FOO, SUBCLASS_OF, RESOURCE) in store
+    assert (BAR, SUBCLASS_OF, RESOURCE) not in store
+
+
+@pytest.mark.generic_rule
+def test_fixed_object():
+    document = """
+        @prefix example: <http://example.com/> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @prefix schema: <https://schema.org/> .
+
+        ($s a schema:Person) → ($s a example:Person) .
+    """
+
+    store = InMemoryHexastore()
+    reasoner = ForwardReasoner(store)
+
+    generic_rule.parse_and_register(document, reasoner)
+
+    reasoner.insert(A, TYPE, PERSON, 1)
+    reasoner.insert(B, TYPE, ORGANISATION, 1)
+
+    assert (A, TYPE, IRI("http://example.com/Person")) in store
+    assert (B, TYPE, IRI("http://example.com/Person")) not in store

@@ -6,8 +6,11 @@ prefix: "@prefix" PN_PREFIX? ":" iriref "."
 
 rules: rule+
 
-rule: body ("st" constraints)? _IMPLIES head "." -> terminating_rule
-    | body ("st" constraints)? _IMPLIES "(" rules ")" "." -> recursive_rule
+rule: simple_rule
+    | body ("st" constraints)? _IMPLIES "(" simple_rules ")" "." -> recursive_rule
+
+simple_rule: body ("st" constraints)? _IMPLIES head "." -> terminating_rule
+simple_rules: simple_rule+
 
 body: triple ("," triple)*
 head: triple ("," triple)*

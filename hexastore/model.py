@@ -1,7 +1,7 @@
 import functools
 from typing import List, Dict, Union, Optional, Tuple, overload, TypeVar, AbstractSet
 
-from .ast import TYPE_ORDER, Order, Variable, OrderCondition
+from .ast import TYPE_ORDER_MAP, Order, Variable, OrderCondition
 from .typing import Term, Triple
 
 T = TypeVar("T")
@@ -9,19 +9,22 @@ T = TypeVar("T")
 
 @functools.total_ordering
 class Key:
-    __slots__ = ["obj"]
+    __slots__ = ["obj", "_type", "_order"]
 
     def __init__(self, obj: Term):
         self.obj = obj
+        self._type = type(obj)
+
+        try:
+            self._order = TYPE_ORDER_MAP[self._type]
+        except KeyError:
+            raise TypeError(f"Unable to Key({self._type})")
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Key):
             return NotImplemented
 
-        t_a = type(self.obj)
-        t_b = type(other.obj)
-
-        if t_a is not t_b:
+        if self._type is not other._type:
             return False
         else:
             return self.obj == other.obj
@@ -32,14 +35,8 @@ class Key:
         if not isinstance(other, Key):
             return NotImplemented
 
-        t_a = type(self.obj)
-        t_b = type(other.obj)
-
-        if t_a is not t_b:
-            try:
-                return TYPE_ORDER.index(t_a) < TYPE_ORDER.index(t_b)
-            except ValueError:
-                return NotImplemented
+        if self._type is not other._type:
+            return self._order < other._order
         else:
             # assert isinstance(self.obj, type(other.obj))
             if isinstance(self.obj, tuple):

@@ -5,7 +5,7 @@ from typing import Union, Tuple, Optional, Dict
 
 from lark import Lark, Transformer, v_args
 
-from .ast import IRI, Variable, BlankNode, LangTaggedString
+from .ast import IRI, Variable, BlankNode, LangTaggedString, TypedLiteral
 from .namespace import Namespace
 
 logger = logging.getLogger(__name__)
@@ -92,7 +92,8 @@ class _Transformer(Transformer):
         if type == IRI(value="http://www.w3.org/2001/XMLSchema#string"):
             return s
         else:
-            assert False
+            return TypedLiteral(s, type)
+            assert False, f"s = {s}, type = {type}"
 
     def string(self, s):
         if s.type == "STRING_LITERAL_QUOTE":

@@ -1,14 +1,48 @@
 from decimal import Decimal
 import io
 import textwrap
+import pkgutil
 
 import pytest
 
-from hexastore.ast import IRI, LangTaggedString
+from lark import Lark, Token
+
+from hexastore.ast import IRI, LangTaggedString, TypedLiteral
 from hexastore.model import Key
 from hexastore.memory import InMemoryHexastore
 from hexastore.turtle import parse
 from hexastore.turtle_serialiser import serialise
+
+
+@pytest.mark.turtle
+def test_turtle_escaped_string():
+    document = """
+        "Stiftung \\"Langmatt\\" Sidney und Jenny Brown"
+    """
+
+    turtle_parser = Lark(pkgutil.get_data("hexastore", "lark/turtle.lark").decode(), start="string", parser="lalr")
+    ast = turtle_parser.parse(document)
+    print(ast)
+    assert ast.children[0] == Token("STRING_LITERAL_QUOTE", '"Stiftung \\"Langmatt\\" Sidney und Jenny Brown"')
+
+
+@pytest.mark.turtle
+def test_typed_literal():
+    document = """
+        <http://bnb.data.bl.uk/id/person/%C3%96zbayKaan1964-/birth> <http://purl.org/vocab/bio/0.1/date> "1964"^^<http://www.w3.org/2001/XMLSchema#gYear> .
+    """
+
+    store = InMemoryHexastore()
+
+    parse(document, lambda s, p, o: store.insert(s, p, o, 1))
+
+    assert list(store.triples()) == [
+        (
+            IRI("http://bnb.data.bl.uk/id/person/%C3%96zbayKaan1964-/birth"),
+            IRI("http://purl.org/vocab/bio/0.1/date"),
+            TypedLiteral("1964", IRI("http://www.w3.org/2001/XMLSchema#gYear")),
+        )
+    ]
 
 
 @pytest.mark.turtle

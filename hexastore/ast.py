@@ -73,6 +73,31 @@ class LangTaggedString:
 
 @functools.total_ordering
 @attr.s(frozen=True, cmp=False, hash=True)
+class TypedLiteral:
+    value: str = attr.ib()
+    datatype: IRI = attr.ib()
+
+    def __str__(self) -> str:
+        return f'"{self.value}"^^{self.datatype}'
+
+    def __lt__(self, other: object) -> bool:
+        if isinstance(other, TypedLiteral):
+            if self.value == other.value:
+                return self.datatype < other.datatype
+
+            return self.value < other.value
+        else:
+            return NotImplemented
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, TypedLiteral):
+            return False
+
+        return self.value == other.value and self.datatype == other.datatype
+
+
+@functools.total_ordering
+@attr.s(frozen=True, cmp=False, hash=True)
 class Variable:
     value: str = attr.ib()
 
@@ -136,4 +161,21 @@ class TripleStatusItem:
 #   Blank nodes
 #   IRIs
 #   RDF literals
-TYPE_ORDER = [type(None), tuple, BlankNode, IRI, str, LangTaggedString, int, decimal.Decimal, float, Variable]
+#
+# TODO: Improve ordering so that TypedLiterals are interspersed with literals that are stored
+#   in native form.
+TYPE_ORDER = [
+    type(None),
+    tuple,
+    BlankNode,
+    IRI,
+    str,
+    LangTaggedString,
+    int,
+    decimal.Decimal,
+    float,
+    TypedLiteral,
+    Variable,
+]
+
+TYPE_ORDER_MAP = {k: i for i, k in enumerate(TYPE_ORDER)}

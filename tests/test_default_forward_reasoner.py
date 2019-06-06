@@ -1,6 +1,6 @@
 import pytest
 
-from hexastore.ast import IRI
+from hexastore.ast import IRI, Variable
 from hexastore.memory import InMemoryHexastore
 from hexastore.default_forward_reasoner import default_forward_reasoner
 
@@ -202,7 +202,7 @@ def test_forward_reasoner_with_children_1():
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(CHILDREN, INVERSE_OF, PARENT, 1)
-    reasoner.register_predicate_rule(PARENT, 1, parent_sibling_rule)
+    reasoner.register_rule((Variable("s"), PARENT, Variable("o")), 1, parent_sibling_rule)
 
     reasoner.insert(A, CHILDREN, C, 3)
     reasoner.insert(A, CHILDREN, D, 4)
@@ -222,7 +222,7 @@ def test_forward_reasoner_with_children():
 
     reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
     reasoner.insert(CHILDREN, INVERSE_OF, PARENT, 1)
-    reasoner.register_predicate_rule(PARENT, 1, parent_sibling_rule)
+    reasoner.register_rule((Variable("s"), PARENT, Variable("o")), 1, parent_sibling_rule)
 
     reasoner.insert(A, SPOUSE, B, 2)
     reasoner.insert(C, PARENT, A, 3)

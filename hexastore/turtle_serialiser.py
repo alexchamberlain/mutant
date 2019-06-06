@@ -2,7 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 import decimal
 
-from .ast import IRI, BlankNode
+from .ast import IRI, BlankNode, TypedLiteral, LangTaggedString
 
 TYPE = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
 
@@ -91,6 +91,10 @@ class _Serialiser:
             s = f"_:{self._blank_node_counter}"
             self._blank_node_counter += 1
             return s
+        elif isinstance(t, TypedLiteral):
+            return f'"{t.value}"^^{self._serialise_term(t.datatype)}'
+        elif isinstance(t, LangTaggedString):
+            return f'"{t.value}"@{t.language}'
         else:
             import pdb
 

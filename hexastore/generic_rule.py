@@ -40,39 +40,40 @@ class RecursiveRule:
 def parse_and_register(document, store):
     rules = parse(document)
 
-    def register_predicate_rule(p, callback, inferred_from):
-        store.register_predicate_rule(p, 0, callback, inferred_from)
+    def register_rule(p, callback, inferred_from):
+        assert callable(callback)
+        store.register_rule(p, 0, callback, inferred_from)
 
     for r in rules:
-        _register_rule(r, register_predicate_rule, tuple())
+        _register_rule(r, register_rule, tuple())
 
 
-def _register_rule(r, register_predicate_rule, inferred_from):
+def _register_rule(r, register_rule, inferred_from):
     logger.debug(f"Registering {r}")
+    # assert callable(r)
     if len(r.body) == 1:
         pattern = r.body[0]
 
         if isinstance(r, RecursiveRule):
             logger.debug(f"Registering RecursiveRule1")
-            register_predicate_rule(
-                pattern[1], RecursiveRule1(pattern[0], pattern[2], r.constraints, r.head, inferred_from), inferred_from
+            register_rule(
+                pattern, RecursiveRule1(pattern[0], pattern[2], r.constraints, r.head, inferred_from), inferred_from
             )
         else:
-            register_predicate_rule(
-                pattern[1], GeneralRule1(pattern[0], pattern[2], r.constraints, r.head, inferred_from), inferred_from
+            assert isinstance(r, Rule)
+            register_rule(
+                pattern, GeneralRule1(pattern[0], pattern[2], r.constraints, r.head, inferred_from), inferred_from
             )
     else:
         for i, pattern in enumerate(r.body):
             rest = tuple(p for j, p in enumerate(r.body) if i != j)
 
-            if isinstance(r, RecursiveRule):
-                assert False
-            else:
-                register_predicate_rule(
-                    pattern[1],
-                    GeneralRuleMany(pattern[0], pattern[2], rest, r.constraints, r.head, inferred_from),
-                    inferred_from,
-                )
+            assert isinstance(r, Rule)
+            register_rule(
+                pattern,
+                GeneralRuleMany(pattern[0], pattern[2], rest, r.constraints, r.head, inferred_from),
+                inferred_from,
+            )
 
 
 def parse(document):
@@ -82,7 +83,28 @@ def parse(document):
     return transformer.transform(tree)
 
 
-class GeneralRule1:
+class _BaseRule:
+    def __init__(
+        self, constraints: List[Callable[[Solution], bool]], head: List[TriplePattern], inferred_from: Tuple[Triple]
+    ):
+        assert isinstance(constraints, tuple)
+        assert isinstance(head, tuple)
+        assert isinstance(inferred_from, tuple)
+
+        self._constraints = constraints
+        self._head = head
+        self._inferred_from = inferred_from
+
+    def apply_solution(self, store, solution: Solution, trigger_triples: Tuple[Triple]):
+        if not _test_constraints(self._constraints, solution):
+            return
+
+        for triple_pattern in self._head:
+            triple = _resolve(triple_pattern, solution)
+            store.insert(triple, self._inferred_from + trigger_triples)
+
+
+class GeneralRule1(_BaseRule):
     def __init__(
         self,
         s: Variable,
@@ -91,15 +113,10 @@ class GeneralRule1:
         head: List[TriplePattern],
         inferred_from: Tuple[Triple],
     ):
-        assert isinstance(constraints, tuple)
-        assert isinstance(head, tuple)
-        assert isinstance(inferred_from, tuple)
+        super().__init__(constraints, head, inferred_from)
 
         self._s = s
         self._o = o
-        self._constraints = constraints
-        self._head = head
-        self._inferred_from = inferred_from
 
     def __repr__(self):
         return f"GeneralRule1({self._s} {self._o} {self._constraints} {self._head} {self._inferred_from})"
@@ -134,19 +151,7 @@ class GeneralRule1:
         elif o != self._o:
             return
 
-        constraints_pass = True
-        for constraint in self._constraints:
-            if not constraint(solution):
-                constraints_pass = False
-                break
-
-        if not constraints_pass:
-            return
-
-        for triple_pattern in self._head:
-            triple = _resolve(triple_pattern, solution)
-            logger.debug(f"triple {triple}")
-            store.insert(triple, self._inferred_from + ((s, p, o),))
+        self.apply_solution(store, solution, ((s, p, o),))
 
 
 class RecursiveRule1:
@@ -201,13 +206,7 @@ class RecursiveRule1:
         elif o != self._o:
             return
 
-        constraints_pass = True
-        for constraint in self._constraints:
-            if not constraint(solution):
-                constraints_pass = False
-                break
-
-        if not constraints_pass:
+        if not _test_constraints(self._constraints, solution):
             return
 
         for head in self._head:
@@ -216,10 +215,10 @@ class RecursiveRule1:
                 _resolve_constraints(head.constraints, solution),
                 _resolve_patterns(head.head, solution),
             )
-            _register_rule(new_rule, store.register_predicate_rule, self._inferred_from + ((s, p, o),))
+            _register_rule(new_rule, store.register_rule, self._inferred_from + ((s, p, o),))
 
 
-class GeneralRuleMany:
+class GeneralRuleMany(_BaseRule):
     def __init__(
         self,
         s: Variable,
@@ -230,16 +229,12 @@ class GeneralRuleMany:
         inferred_from: Tuple[Triple],
     ):
         assert isinstance(rest, tuple)
-        assert isinstance(constraints, tuple)
-        assert isinstance(head, tuple)
-        assert isinstance(inferred_from, tuple)
+
+        super().__init__(constraints, head, inferred_from)
 
         self._s = s
         self._o = o
         self._rest = rest
-        self._constraints = constraints
-        self._head = head
-        self._inferred_from = inferred_from
 
     def __repr__(self):
         return f"GeneralRuleMany({self._s}, {self._o}, {self._rest}, {self._constraints}, {self._head}, {self._inferred_from})"
@@ -280,19 +275,7 @@ class GeneralRuleMany:
         solutions, stats = engine.execute(store, patterns, [], solution)
 
         for s in solutions:
-            constraints_pass = True
-            for constraint in self._constraints:
-                if not constraint(s):
-                    constraints_pass = False
-                    break
-
-            if not constraints_pass:
-                logger.debug(f"Skipping s={s}")
-                continue
-
-            for triple_pattern in self._head:
-                triple = _resolve(triple_pattern, s)
-                store.insert(triple, self._inferred_from + tuple(s.triples))
+            self.apply_solution(store, s, tuple(s.triples))
 
         logger.debug(f"Applied {self} to {s}, {p}, {o}; len(solutions)={len(solutions)}, stats={stats}")
 
@@ -318,6 +301,15 @@ def _s(term: TermPattern, solution: Solution) -> TermPattern:
         return solution.get(term, term)
 
     return term
+
+
+def _test_constraints(constraints, solution):
+    for constraint in constraints:
+        if not constraint(solution):
+            logger.debug(f"Skipping solution={solution}")
+            return False
+
+    return True
 
 
 class ConstraintIsNot:
@@ -357,6 +349,13 @@ class _Transformer(Transformer):
 
     @v_args(inline=True)
     def rule(self, r):
+        return r
+
+    def simple_rules(self, children):
+        return children
+
+    @v_args(inline=True)
+    def simple_rule(self, r):
         return r
 
     def terminating_rule(self, children):

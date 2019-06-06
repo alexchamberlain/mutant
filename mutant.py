@@ -2,6 +2,7 @@ import sys
 import contextlib
 import logging
 from typing import Dict
+import time
 
 import click
 
@@ -39,26 +40,72 @@ def cli(log_file):
 @click.option("-n", "--namespace", type=(str, str), multiple=True)
 @click.argument("filenames", nargs=-1)
 @click.argument("output", nargs=1)
+def cat(namespace, filenames, output):
+    store = InMemoryHexastore()
+
+    namespaces: Dict[str, Namespace] = {n: Namespace(n, IRI(i)) for n, i in namespace}
+
+    try:
+        with Timer() as t:
+            for filename in filenames:
+                if filename.endswith("ttl") or filename.endswith("nt"):
+                    triples = []
+                    with open(filename) as fo:
+                        new_namespaces = turtle.parse(fo.read(), lambda s, p, o: triples.append((s, p, o)))
+
+                    _update_namespaces(namespaces, new_namespaces)
+                    store.bulk_insert(triples, 1)
+                else:
+                    raise RuntimeError(f"Unknown file {filename}")
+    finally:
+        logger.info(f"Parsing took {t.interval} seconds.")
+
+    try:
+        with Timer() as t:
+            print(f"# Triples {len(store)}")
+
+            with smart_open(output) as fo:
+                turtle_serialiser.serialise(store, fo, [(n.name, n.prefix) for n in namespaces.values()])
+    finally:
+        logger.info(f"Serialisation took {t.interval} seconds.")
+
+
+@cli.command()
+@click.option("-n", "--namespace", type=(str, str), multiple=True)
+@click.argument("filenames", nargs=-1)
+@click.argument("output", nargs=1)
 def reason(namespace, filenames, output):
     store = InMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     namespaces: Dict[str, Namespace] = {n: Namespace(n, IRI(i)) for n, i in namespace}
 
-    for filename in filenames:
-        if filename.endswith("ttl"):
-            with open(filename) as fo:
-                new_namespaces = turtle.parse(fo.read(), lambda s, p, o: reasoner.insert(s, p, o, 1))
+    try:
+        with Timer() as t:
+            for filename in filenames:
+                if filename.endswith("ttl") or filename.endswith("nt"):
+                    triples = []
+                    with open(filename) as fo:
+                        new_namespaces = turtle.parse(fo.read(), lambda s, p, o: triples.append((s, p, o)))
 
-            _update_namespaces(namespaces, new_namespaces)
-        elif filename.endswith("mtt"):
-            with open(filename) as fo:
-                generic_rule.parse_and_register(fo.read(), reasoner)
+                    _update_namespaces(namespaces, new_namespaces)
+                    reasoner.bulk_insert(triples, 1)
+                elif filename.endswith("mtt"):
+                    with open(filename) as fo:
+                        generic_rule.parse_and_register(fo.read(), reasoner)
+                else:
+                    raise RuntimeError(f"Unknown file {filename}")
+    finally:
+        logger.info(f"Parsing took {t.interval} seconds.")
 
-    print(f"# Triples {len(store)}")
+    try:
+        with Timer() as t:
+            print(f"# Triples {len(store)}")
 
-    with smart_open(output) as fo:
-        turtle_serialiser.serialise(store, fo, [(n.name, n.prefix) for n in namespaces.values()])
+            with smart_open(output) as fo:
+                turtle_serialiser.serialise(store, fo, [(n.name, n.prefix) for n in namespaces.values()])
+    finally:
+        logger.info(f"Serialisation took {t.interval} seconds.")
 
 
 def _update_namespaces(namespaces, new_namespaces):
@@ -81,6 +128,16 @@ def smart_open(filename=None):
     finally:
         if fh is not sys.stdout:
             fh.close()
+
+
+class Timer:
+    def __enter__(self):
+        self.start = time.clock()
+        return self
+
+    def __exit__(self, *args):
+        self.end = time.clock()
+        self.interval = self.end - self.start
 
 
 if __name__ == "__main__":

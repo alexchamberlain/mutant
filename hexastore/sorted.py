@@ -1,3 +1,4 @@
+import functools
 import typing
 from typing import (
     AbstractSet,
@@ -15,8 +16,8 @@ from typing import (
     ValuesView,
     cast,
 )
+import bisect
 
-from . import bisect
 from .ast import Order
 from .typing import Comparable, MutableOrderedMapping
 
@@ -28,7 +29,6 @@ V = typing.TypeVar("V")
 
 class SortedList(Sequence[T], AbstractSet[T]):
     def __init__(self, iterable: Optional[Iterable[T]] = None, *, key: Optional[Callable[[T], U]] = None):
-
         if key is None:
             self.key = cast(Callable[[T], U], lambda x: x)
         else:
@@ -36,8 +36,10 @@ class SortedList(Sequence[T], AbstractSet[T]):
 
         if iterable is None:
             self._l: List[T] = []
+            self._keys: List[U] = []
         else:
-            self._l: List[T] = sorted(iterable, key=key)
+            self._l: List[T] = sorted(iterable, key=self.key)
+            self._keys: List[U] = [self.key(k) for k in self._l]
 
     def __repr__(self) -> str:
         return "SortedList({!r})".format(self._l)
@@ -77,19 +79,45 @@ class SortedList(Sequence[T], AbstractSet[T]):
             return NotImplemented
 
     def insert(self, x: T) -> int:
-        i = bisect.bisect(self._l, x, key=self.key)
+        key = self.key(x)
+        i = bisect.bisect(self._keys, key)
         self._l.insert(i, x)
+        self._keys.insert(i, key)
         return i
 
     def index(self, x: T, start: int = 0, end: Optional[int] = None) -> int:
         if end is None:
             end = len(self._l)
 
-        i = bisect.bisect_left(self, x, key=self.key, lo=start, hi=end)
-        if i != len(self) and self[i] == x:
+        key = self.key(x)
+        i = bisect.bisect_left(self._keys, key, lo=start, hi=end)
+        if i != end and self[i] == x:
             return i
 
         raise ValueError
+
+    def index_or_insert(self, x: T, hint: Optional[int] = 0) -> Tuple[int, bool]:
+        end = len(self._l)
+        key = self.key(x)
+
+        if end == 0 or self._keys[-1] < key:
+            self._l.append(x)
+            self._keys.append(key)
+            return end, True
+
+        i = bisect.bisect_left(self._keys, key, lo=hint, hi=end)
+        if i != end and self[i] == x:
+            return i, False
+
+        self._l.insert(i, x)
+        self._keys.insert(i, key)
+        return i, True
+
+    def __contains__(self, x: Any) -> bool:
+        end = len(self._l)
+        key = self.key(x)
+        i = bisect.bisect_left(self._keys, key, lo=0, hi=end)
+        return i != end and self[i] == x
 
 
 class _SortedMappingValues(ValuesView[V]):
@@ -183,10 +211,11 @@ class SortedMapping(MutableOrderedMapping[T, V]):
                 raise KeyError(k)
 
     def __setitem__(self, k: T, v: V) -> None:
-        try:
-            self._values[self._keys.index(k)] = v
-        except ValueError:
-            self._values.insert(self._keys.insert(k), v)
+        i, inserted = self._keys.index_or_insert(k)
+        if inserted:
+            self._values.insert(i, v)
+        else:
+            self._values[i] = v
 
     def __delitem__(self, k: T) -> None:
         try:
@@ -195,6 +224,15 @@ class SortedMapping(MutableOrderedMapping[T, V]):
             del self._values[i]
         except ValueError:
             pass
+
+    def get_or_set(self, k, factory, hint=0):
+        i, inserted = self._keys.index_or_insert(k, hint=0)
+        if inserted:
+            v = factory()
+            self._values.insert(i, v)
+            return i, v
+        else:
+            return i, self._values[i]
 
 
 class _SortedMappingItems(ItemsView[T, V]):
@@ -226,30 +264,13 @@ class DefaultSortedMapping(SortedMapping[T, V]):
         if isinstance(k, list) or isinstance(k, SortedList):
             output = []
 
-            k_iter = iter(k)
-            items_iter = iter(self.items())
+            hint = 0
+            for kk in k:
+                hint, value = self.get_or_set(kk, functools.partial(self.factory, kk))
+                hint += 1
+                output.append((kk, value))
 
-            try:
-                k_current = next(k_iter)
-                items_current = next(items_iter)
-
-                while True:
-                    if self._keys.key(k_current) < self._keys.key(items_current[0]):
-                        output.append((k_current, self.factory(k_current)))
-                        k_current = next(k_iter)
-                    elif self._keys.key(k_current) > self._keys.key(items_current[0]):
-                        items_current = next(items_iter)
-                    else:
-                        output.append((k_current, items_current[1]))
-                        k_current = next(k_iter)
-                        items_current = next(items_iter)
-            except StopIteration:
-                for k_current in k_iter:
-                    output.append((k_current, self.factory(k_current)))
-                return output
+            return output
         else:
-            try:
-                return super().__getitem__(k)
-            except KeyError:
-                self[k] = value = self.factory(k)
-                return value
+            _, value = self.get_or_set(k, functools.partial(self.factory, k))
+            return value
