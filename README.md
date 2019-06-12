@@ -112,6 +112,11 @@ The only option right now is to dump the store again, and re-run the rules from 
 3. Include test cases along side rules.
 4. mutant-server
 5. Push constraints down from generic rule implementations to `engine`.
+6. Benchmark vs `rdflib`
+    1. Simple examples
+    2. Major datasets
+        1. Wikidata
+        2. British National Bibliography (British Library)
 
 ## Why Python?
 
