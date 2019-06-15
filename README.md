@@ -108,11 +108,14 @@ But then, that store moves on. Records are added. Records are deleted.
 The only option right now is to dump the store again, and re-run the rules from the ground up. This seems rather wasteful and slow. Idea: Given the original dump, the rules, the original output and the new dump, calculate the delta between the original dump and the new dump and apply the rules based on the knowledge in the original output.
 
 ### Other ideas
-1. Allow hybrid files with a mix of triples and rules
-3. Include test cases along side rules.
-4. mutant-server
-5. Push constraints down from generic rule implementations to `engine`.
-6. Benchmark vs `rdflib`
+1. Improve mutant language
+    1. Allow hybrid files with a mix of triples and rules
+    2. Allow literals in triple patterns
+    3. Include test cases along side rules.
+2. Improve implementation
+    1. Push constraints down from generic rule implementations to `engine`.
+3. mutant-server
+4. Benchmark vs `rdflib`
     1. Simple examples
     2. Major datasets
         1. Wikidata
