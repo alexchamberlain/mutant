@@ -5,7 +5,7 @@ from typing import Any, Sequence, Union, Tuple, Iterator, List, TYPE_CHECKING, A
 import attr
 
 from .ast import Variable, Order, IRI, OrderCondition
-from .model import Solution
+from .model import Solution, Key
 from .typing import Hexastore, Triple, Term
 from .util import triple_map
 
@@ -92,7 +92,12 @@ class _Engine:
 
     def _match(self, triple_pattern_: TriplePattern) -> Iterator[Solution]:
         triple_pattern, index_key = tuple(
-            zip(*sorted(zip(triple_map(self._preprocess_term, triple_pattern_), (SUBJECT, PREDICATE, OBJECT))))
+            zip(
+                *sorted(
+                    zip(triple_map(self._preprocess_term, triple_pattern_), (SUBJECT, PREDICATE, OBJECT)),
+                    key=lambda t: (key(t[0]), t[1]),
+                )
+            )
         )
 
         if TYPE_CHECKING:
@@ -189,3 +194,10 @@ class Stats:
 
     def increment_triples(self):
         self.triples_visited += 1
+
+
+def key(t):
+    if isinstance(t, VariableWithOrderInformation):
+        return t
+    else:
+        return Key(t)

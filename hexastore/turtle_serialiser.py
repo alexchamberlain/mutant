@@ -103,11 +103,11 @@ def _reorder(iter_):
     reified_statements = []
     for s, po in iter_:
         if not isinstance(s, tuple):
+            yield s, po
             break
 
         reified_statements.append((s, po))
 
-    yield s, po
     yield from iter_
     yield from iter(reified_statements)
 
