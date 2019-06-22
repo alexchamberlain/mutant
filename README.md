@@ -120,6 +120,9 @@ The only option right now is to dump the store again, and re-run the rules from 
     2. Major datasets
         1. Wikidata
         2. British National Bibliography (British Library)
+5. Parsers
+    1. Add a N-Triples parser to make BNB benchmark fairer.
+    2. Add CSVW parser.
 
 ## Why Python?
 
