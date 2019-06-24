@@ -18,7 +18,7 @@ class Key:
         try:
             self._order = TYPE_ORDER_MAP[self._type]
         except KeyError:
-            raise TypeError(f"Unable to Key({self._type})")
+            raise TypeError(f"Unable to Key({self._type}: {self.obj})")
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Key):
