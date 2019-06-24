@@ -115,6 +115,8 @@ The only option right now is to dump the store again, and re-run the rules from 
 2. Improve implementation
     1. Push constraints down from generic rule implementations to `engine`.
 3. mutant-server
+    1. Implement a write-ahead log (WAL).
+    2. Implement a disk-based hexastore.
 4. Benchmark vs `rdflib`
     1. Simple examples
     2. Major datasets
