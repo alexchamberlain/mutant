@@ -42,7 +42,7 @@ def parse_and_register(document, store):
 
     def register_rule(p, callback, inferred_from):
         assert callable(callback)
-        store.register_rule(p, 0, callback, inferred_from)
+        store.register_rule(p, callback, inferred_from)
 
     for r in rules:
         _register_rule(r, register_rule, tuple())

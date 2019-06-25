@@ -52,20 +52,78 @@ class TrunkPayload:
         return x in self.map
 
 
-_BranchMappingType = DefaultSortedMapping[Term, MutableOrderedMapping[Term, TripleStatus]]
 _TrunkMappingType = DefaultSortedMapping[Term, TrunkPayload]
 
 
-def _BranchMapping(
-    store: Union["VersionedInMemoryHexastore", "InMemoryHexastore"], natural: bool, leading_term: Term
-) -> MutableIndex:
-    return _BranchMappingType(lambda mid_term: store._list(leading_term, mid_term, natural), key=Key)
-
-
 def _TrunkMapping(store: Union["VersionedInMemoryHexastore", "InMemoryHexastore"], natural: bool) -> MutableIndex:
-    return _TrunkMappingType(
-        lambda leading_term: TrunkPayload(map=_BranchMapping(store, natural, leading_term)), key=Key
-    )
+    return _TrunkMappingType(lambda leading_term: TrunkPayload(map=store._branch(natural, leading_term)), key=Key)
+
+
+class _VersionedBranch:
+    def __init__(self, factory):
+        self._mapping = DefaultSortedMapping[Term, MutableOrderedMapping[Term, TripleStatus]](factory, key=Key)
+
+    def __repr__(self) -> str:
+        return f"_VersionedBranch({self._mapping})"
+
+    def iter(self, order, triple_counter=None):
+        for o, status in self.items(order=order):
+            if triple_counter:
+                triple_counter()
+
+            if status.inserted:
+                yield o
+
+    def __getitem__(
+        self, k: Union[Sequence[Term], Term]
+    ) -> Union[
+        Sequence[Tuple[Term, MutableOrderedMapping[Term, TripleStatus]]], MutableOrderedMapping[Term, TripleStatus]
+    ]:
+        return _VersionedListAdapter(self._mapping[k])
+
+    def items(self, order: Order = Order.ASCENDING):
+        for k, v in self._mapping.items(order):
+            yield k, _VersionedListAdapter(v)
+
+    def __contains__(self, term: Term) -> bool:
+        return term in self._mapping
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, _VersionedBranch):
+            return self._mapping == other._mapping
+        else:
+            return self._mapping == other
+
+
+class _VersionedListAdapter:
+    def __init__(self, leaf):
+        self._leaf = leaf
+
+    def iter(self, order: Order = Order.ASCENDING, triple_counter=None) -> Iterator[Term]:
+        for o, status in self._leaf.items(order):
+            if triple_counter:
+                triple_counter()
+
+            if status.inserted:
+                yield o
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, _VersionedListAdapter):
+            return self._leaf == other._leaf
+        else:
+            return self._leaf == other
+
+    def __contains__(self, other: Any) -> bool:
+        return other in self._leaf
+
+    def __setitem__(self, k: Term, v: TripleStatus) -> None:
+        self._leaf[k] = v
+
+    def __getitem__(self, x: Term) -> TripleStatus:
+        return self._leaf[x]
+
+    def get_or_set(self, o: Term, factory, hint=0):
+        return self._leaf.get_or_set(o, lambda: TripleStatus([]), hint)
 
 
 class VersionedInMemoryHexastore:
@@ -215,9 +273,8 @@ class VersionedInMemoryHexastore:
 
         for s, po in index.items(order=order[0]):
             for p, o_list in po.items(order=order[1]):
-                for o, status in o_list.items(order=order[2]):
-                    if status.inserted:
-                        yield (s, p, o)
+                for o in o_list.iter(order=order[2]):
+                    yield (s, p, o)
 
     def __contains__(self, triple: Triple) -> bool:
         assert isinstance(triple, tuple)
@@ -230,11 +287,76 @@ class VersionedInMemoryHexastore:
 
         return False
 
+    def _branch(self, natural: bool, leading_term: Term) -> _VersionedBranch:
+        return _VersionedBranch(lambda mid_term: self._list(leading_term, mid_term, natural))
+
     def _list(self, s: Term, p: Term, natural: bool) -> SortedMapping[Term, TripleStatus]:
         if not natural:
             s, p = p, s
 
         return self._lists[s][p]
+
+
+class _Branch:
+    def __init__(self, factory):
+        self._mapping = DefaultSortedMapping[Term, SortedList[Term]](factory, key=Key)
+
+    def __repr__(self) -> str:
+        return f"_Branch({self._mapping})"
+
+    def __getitem__(
+        self, k: Union[Sequence[Term], Term]
+    ) -> Union[Sequence[Tuple[Term, SortedList[Term]]], SortedList[Term]]:
+        return _ListAdapter(self._mapping[k])
+
+    def items(self, order: Order = Order.ASCENDING):
+        for k, v in self._mapping.items(order):
+            yield k, _ListAdapter(v)
+
+    def __contains__(self, term: Term) -> bool:
+        return term in self._mapping
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, _Branch):
+            return self._mapping == other._mapping
+        else:
+            return self._mapping == other
+
+
+class _ListAdapter:
+    def __init__(self, leaf):
+        self._leaf = leaf
+
+    def __repr__(self) -> str:
+        return f"_ListAdapter({self._leaf})"
+
+    def iter(self, order: Order = Order.ASCENDING, triple_counter=None) -> Iterator[Term]:
+        for o in self._leaf.iter(order):
+            if triple_counter:
+                triple_counter()
+
+            yield o
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, _ListAdapter):
+            return self._leaf == other._leaf
+        else:
+            return self._leaf == other
+
+    def __contains__(self, other: Any) -> bool:
+        return other in self._leaf
+
+    def index_or_insert(self, x: Term, hint: Optional[int] = 0) -> Tuple[int, bool]:
+        return self._leaf.index_or_insert(x, hint)
+
+    def insert(self, x: Term) -> int:
+        return self._leaf.insert(x)
+
+    def delete(self, x: Term) -> None:
+        return self._leaf.delete(x)
+
+    def to_list(self):
+        return self._leaf.to_list()
 
 
 class InMemoryHexastore:
@@ -374,6 +496,9 @@ class InMemoryHexastore:
     def __contains__(self, triple: Triple) -> bool:
         s, p, o = triple
         return o in self.spo[s][p]
+
+    def _branch(self, natural: bool, leading_term: Term) -> _VersionedBranch:
+        return _Branch(lambda mid_term: self._list(leading_term, mid_term, natural))
 
     def _list(self, s: Term, p: Term, natural: bool) -> SortedList[Term]:
         if not natural:

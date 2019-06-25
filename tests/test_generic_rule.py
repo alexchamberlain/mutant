@@ -7,7 +7,7 @@ from hexastore import generic_rule
 from hexastore.ast import IRI, Variable
 from hexastore.blank_node_factory import BlankNodeFactory
 from hexastore.forward_reasoner import ForwardReasoner
-from hexastore.memory import VersionedInMemoryHexastore
+from hexastore.memory import InMemoryHexastore
 from hexastore.namespace import Namespace
 
 A = IRI("http://example.com/A")
@@ -30,6 +30,17 @@ TYPE = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
 RESOURCE = IRI("http://www.w3.org/2000/01/rdf-schema#Resource")
 SUBCLASS_OF = IRI("http://www.w3.org/2000/01/rdf-schema#subclassOf")
 INFERRED_FROM = IRI("https://example.com/inferred_from")
+
+
+@pytest.fixture
+def store():
+    blank_node_factory = BlankNodeFactory()
+    return InMemoryHexastore(blank_node_factory)
+
+
+@pytest.fixture
+def reasoner(store):
+    return ForwardReasoner(store)
 
 
 def make_parse(start, namespaces=None):
@@ -166,7 +177,7 @@ def test_symmetric():
 
 
 @pytest.mark.generic_rule
-def test_sibling_symmetric_parse_and_register_1():
+def test_sibling_symmetric_parse_and_register_1(store, reasoner):
     document = """
         @prefix schema: <https://schema.org/> .
 
@@ -174,20 +185,16 @@ def test_sibling_symmetric_parse_and_register_1():
             → ($child2 schema:sibling $child1) .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-    reasoner = ForwardReasoner(store)
-
     generic_rule.parse_and_register(document, reasoner)
 
-    reasoner.insert(A, SIBLING, B, 1)
+    reasoner.insert(A, SIBLING, B)
 
     assert (A, SIBLING, B) in store
     assert (B, SIBLING, A) in store
 
 
 @pytest.mark.generic_rule
-def test_sibling_symmetric_parse_and_register_many():
+def test_sibling_symmetric_parse_and_register_many(store, reasoner):
     document = """
         @prefix schema: <https://schema.org/> .
 
@@ -195,14 +202,10 @@ def test_sibling_symmetric_parse_and_register_many():
             → ($child1 schema:sibling $child2) .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-    reasoner = ForwardReasoner(store)
-
     generic_rule.parse_and_register(document, reasoner)
 
-    reasoner.insert(A, PARENT, C, 1)
-    reasoner.insert(B, PARENT, C, 1)
+    reasoner.insert(A, PARENT, C)
+    reasoner.insert(B, PARENT, C)
 
     assert (A, SIBLING, B) in store
     assert (B, SIBLING, A) in store
@@ -210,7 +213,7 @@ def test_sibling_symmetric_parse_and_register_many():
 
 
 @pytest.mark.generic_rule
-def test_sibling_symmetric_parse_and_register_combined():
+def test_sibling_symmetric_parse_and_register_combined(store, reasoner):
     document = """
         @prefix schema: <https://schema.org/> .
 
@@ -220,21 +223,17 @@ def test_sibling_symmetric_parse_and_register_combined():
             → ($child1 schema:sibling $child2) .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-    reasoner = ForwardReasoner(store)
-
     generic_rule.parse_and_register(document, reasoner)
 
-    reasoner.insert(A, PARENT, C, 1)
-    reasoner.insert(B, PARENT, C, 1)
+    reasoner.insert(A, PARENT, C)
+    reasoner.insert(B, PARENT, C)
 
     assert (A, SIBLING, B) in store
     assert (B, SIBLING, A) in store
 
 
 @pytest.mark.generic_rule
-def test_symmetric_register():
+def test_symmetric_register(store, reasoner):
     document = """
         @prefix owl: <http://www.w3.org/2002/07/owl#> .
         @prefix schema: <https://schema.org/> .
@@ -244,21 +243,17 @@ def test_symmetric_register():
         ) .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-    reasoner = ForwardReasoner(store)
-
     generic_rule.parse_and_register(document, reasoner)
 
-    reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
-    reasoner.insert(A, SPOUSE, B, 1)
+    reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY)
+    reasoner.insert(A, SPOUSE, B)
 
     assert (B, SPOUSE, A) in store
 
 
 @pytest.mark.generic_rule
 @pytest.mark.xfail
-def test_recursive_recursive_rule_fails():
+def test_recursive_recursive_rule_fails(store, reasoner):
     document = """
         @prefix example: <http://example.com/> .
         @prefix schema: <https://schema.org/> .
@@ -270,15 +265,11 @@ def test_recursive_recursive_rule_fails():
         ) .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-    reasoner = ForwardReasoner(store)
-
     generic_rule.parse_and_register(document, reasoner)
 
 
 @pytest.mark.generic_rule
-def test_fixed_subject():
+def test_fixed_subject(store, reasoner):
     """This rule is arbitrary, as I can't think of a legit
     use case for this."""
 
@@ -289,21 +280,17 @@ def test_fixed_subject():
         (example:A a $o) → ($o rdfs:subclassOf rdfs:Resource) .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-    reasoner = ForwardReasoner(store)
-
     generic_rule.parse_and_register(document, reasoner)
 
-    reasoner.insert(A, TYPE, FOO, 1)
-    reasoner.insert(B, TYPE, BAR, 1)
+    reasoner.insert(A, TYPE, FOO)
+    reasoner.insert(B, TYPE, BAR)
 
     assert (FOO, SUBCLASS_OF, RESOURCE) in store
     assert (BAR, SUBCLASS_OF, RESOURCE) not in store
 
 
 @pytest.mark.generic_rule
-def test_fixed_object():
+def test_fixed_object(store, reasoner):
     document = """
         @prefix example: <http://example.com/> .
         @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -312,14 +299,10 @@ def test_fixed_object():
         ($s a schema:Person) → ($s a example:Person) .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-    reasoner = ForwardReasoner(store)
-
     generic_rule.parse_and_register(document, reasoner)
 
-    reasoner.insert(A, TYPE, PERSON, 1)
-    reasoner.insert(B, TYPE, ORGANISATION, 1)
+    reasoner.insert(A, TYPE, PERSON)
+    reasoner.insert(B, TYPE, ORGANISATION)
 
     assert (A, TYPE, IRI("http://example.com/Person")) in store
     assert (B, TYPE, IRI("http://example.com/Person")) not in store

@@ -5,7 +5,7 @@ import pytest
 from hexastore.ast import IRI, BlankNode
 from hexastore.blank_node_factory import BlankNodeFactory
 from hexastore.forward_reasoner import ForwardReasoner
-from hexastore.memory import VersionedInMemoryHexastore
+from hexastore.memory import InMemoryHexastore
 from hexastore.model import Key
 from hexastore.util import triple_map
 
@@ -38,6 +38,16 @@ TRANSITIVE_PROPERTY = IRI("http://example.com/transitive-property")
 MEMBER = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#member")
 
 
+@pytest.fixture
+def store():
+    return InMemoryHexastore()
+
+
+@pytest.fixture
+def reasoner(store):
+    return ForwardReasoner(store)
+
+
 def parent_sibling_rule(store, s, p, o, insert):
     inferred_from = (s, p, o)
     for s_, status in store.ops[o][p].items():
@@ -50,22 +60,18 @@ def parent_sibling_rule(store, s, p, o, insert):
 
 @pytest.mark.forward_reasoner
 @pytest.mark.skip
-def test_forward_reasoner_with_one_parent_delete():
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-    reasoner = ForwardReasoner(store)
-
-    reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
-    reasoner.insert(CHILDREN, INVERSE_OF, PARENT, 1)
+def test_forward_reasoner_with_one_parent_delete(store, reasoner):
+    reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY)
+    reasoner.insert(CHILDREN, INVERSE_OF, PARENT)
     reasoner.register_predicate_rule(PARENT, parent_sibling_rule)
 
-    reasoner.insert(C, PARENT, A, 2)
-    reasoner.insert(D, PARENT, A, 3)
+    reasoner.insert(C, PARENT, A)
+    reasoner.insert(D, PARENT, A)
 
     assert (C, SIBLING, D) in store
     assert (D, SIBLING, C) in store
 
-    reasoner.delete(C, PARENT, A, 4)
+    reasoner.delete(C, PARENT, A)
 
     pprint(list(store.triples()))
 
@@ -90,24 +96,20 @@ def test_forward_reasoner_with_one_parent_delete():
 
 @pytest.mark.forward_reasoner
 @pytest.mark.skip
-def test_forward_reasoner_with_children_and_delete():
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-    reasoner = ForwardReasoner(store)
-
-    reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
-    reasoner.insert(CHILDREN, INVERSE_OF, PARENT, 1)
+def test_forward_reasoner_with_children_and_delete(store, reasoner):
+    reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY)
+    reasoner.insert(CHILDREN, INVERSE_OF, PARENT)
     reasoner.register_predicate_rule(PARENT, parent_sibling_rule)
 
-    reasoner.insert(A, SPOUSE, B, 1)
-    reasoner.insert(C, PARENT, A, 2)
-    reasoner.insert(C, PARENT, B, 3)
-    reasoner.insert(D, PARENT, A, 4)
-    reasoner.insert(D, PARENT, B, 5)
+    reasoner.insert(A, SPOUSE, B)
+    reasoner.insert(C, PARENT, A)
+    reasoner.insert(C, PARENT, B)
+    reasoner.insert(D, PARENT, A)
+    reasoner.insert(D, PARENT, B)
 
     print(len(store))
 
-    reasoner.delete(D, PARENT, A, 6)
+    reasoner.delete(D, PARENT, A)
 
     blank_node_factory = BlankNodeFactory()
     expected_store = VersionedInMemoryHexastore(blank_node_factory)
@@ -269,13 +271,9 @@ def _get_many(hexastore, s, p):
 
 
 @pytest.mark.forward_reasoner
-def test_forward_reasoner_inferred_child_with_delete():
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-    reasoner = ForwardReasoner(store)
-
-    reasoner.insert(A, SPOUSE, B, 1)
-    reasoner.insert(C, PARENT, A, 2)
-    reasoner.insert(C, PARENT, B, 3)
+def test_forward_reasoner_inferred_child_with_delete(store, reasoner):
+    reasoner.insert(A, SPOUSE, B)
+    reasoner.insert(C, PARENT, A)
+    reasoner.insert(C, PARENT, B)
 
     # assert list(store.triples()) == [((B, SPOUSE, A), INFERRED_FROM, (A, SPOUSE, B)), (A, SPOUSE, B), (B, SPOUSE, A)]
