@@ -1,7 +1,7 @@
 import pytest
 
 from hexastore.ast import IRI, Variable
-from hexastore.memory import InMemoryHexastore
+from hexastore.memory import VersionedInMemoryHexastore
 from hexastore.default_forward_reasoner import default_forward_reasoner
 
 A = IRI("http://example.com/A")
@@ -45,7 +45,7 @@ def parent_sibling_rule(store, s, p, o):
 
 @pytest.mark.default_forward_reasoner
 def test_default_forward_reasoner_symmetric_property():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
@@ -56,7 +56,7 @@ def test_default_forward_reasoner_symmetric_property():
 
 @pytest.mark.default_forward_reasoner
 def test_default_forward_reasoner_with_delete():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
@@ -71,7 +71,7 @@ def test_default_forward_reasoner_with_delete():
 
 @pytest.mark.default_forward_reasoner
 def test_forward_reasoner_transitive():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(SUBCLASS_OF, TYPE, TRANSITIVE_PROPERTY, 1)
@@ -83,7 +83,7 @@ def test_forward_reasoner_transitive():
 
 @pytest.mark.default_forward_reasoner
 def test_forward_reasoner_transitive_reverse():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(SUBCLASS_OF, TYPE, TRANSITIVE_PROPERTY, 1)
@@ -95,7 +95,7 @@ def test_forward_reasoner_transitive_reverse():
 
 @pytest.mark.default_forward_reasoner
 def test_forward_reasoner_transitive_with_delete():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(SUBCLASS_OF, TYPE, TRANSITIVE_PROPERTY, 1)
@@ -117,7 +117,7 @@ def test_forward_reasoner_transitive_with_delete():
 
 @pytest.mark.default_forward_reasoner
 def test_forward_reasoner_subclass_of():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(PERSON, SUBCLASS_OF, THING, 1)
@@ -128,7 +128,7 @@ def test_forward_reasoner_subclass_of():
 
 @pytest.mark.default_forward_reasoner
 def test_forward_reasoner_subproperty_property():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(SPOUSE, SUBPROPERTY_OF, RELATED_TO, 1)
@@ -139,7 +139,7 @@ def test_forward_reasoner_subproperty_property():
 
 @pytest.mark.default_forward_reasoner
 def test_forward_reasoner_domain_property():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(SPOUSE, DOMAIN, PERSON, 1)
@@ -150,7 +150,7 @@ def test_forward_reasoner_domain_property():
 
 @pytest.mark.default_forward_reasoner
 def test_forward_reasoner_range_property():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(SPOUSE, RANGE, PERSON, 1)
@@ -161,7 +161,7 @@ def test_forward_reasoner_range_property():
 
 @pytest.mark.default_forward_reasoner
 def test_forward_reasoner_domain_range_property():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(SPOUSE, DOMAIN, PERSON, 1)
@@ -174,7 +174,7 @@ def test_forward_reasoner_domain_range_property():
 
 @pytest.mark.default_forward_reasoner
 def test_forward_reasoner_with_child():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
@@ -198,7 +198,7 @@ def test_forward_reasoner_with_child():
 
 @pytest.mark.default_forward_reasoner
 def test_forward_reasoner_with_children_1():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(CHILDREN, INVERSE_OF, PARENT, 1)
@@ -217,7 +217,7 @@ def test_forward_reasoner_with_children_1():
 
 @pytest.mark.default_forward_reasoner
 def test_forward_reasoner_with_children():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)

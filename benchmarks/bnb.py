@@ -3,7 +3,7 @@ import logging
 import time
 
 from hexastore import turtle
-from hexastore.memory import InMemoryHexastore
+from hexastore.memory import VersionedInMemoryHexastore
 
 from rdflib.graph import Graph
 
@@ -32,7 +32,7 @@ root.addHandler(handler)
 
 try:
     with Timer() as t:
-        store = InMemoryHexastore()
+        store = VersionedInMemoryHexastore()
 
         with Timer() as t1:
             triples = []

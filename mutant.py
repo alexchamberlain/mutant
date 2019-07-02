@@ -9,7 +9,7 @@ import click
 from hexastore import generic_rule, turtle, turtle_serialiser
 from hexastore.ast import IRI
 from hexastore.namespace import Namespace
-from hexastore.memory import InMemoryHexastore
+from hexastore.memory import VersionedInMemoryHexastore
 from hexastore.default_forward_reasoner import default_forward_reasoner
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ def cli(log_file):
 @click.argument("filenames", nargs=-1)
 @click.argument("output", nargs=1)
 def cat(namespace, filenames, output):
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
 
     namespaces: Dict[str, Namespace] = {n: Namespace(n, IRI(i)) for n, i in namespace}
 
@@ -75,7 +75,7 @@ def cat(namespace, filenames, output):
 @click.argument("filenames", nargs=-1)
 @click.argument("output", nargs=1)
 def reason(namespace, filenames, output):
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     namespaces: Dict[str, Namespace] = {n: Namespace(n, IRI(i)) for n, i in namespace}

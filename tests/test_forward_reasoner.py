@@ -3,7 +3,7 @@ from pprint import pprint
 import pytest
 
 from hexastore.ast import IRI, BlankNode
-from hexastore.memory import InMemoryHexastore
+from hexastore.memory import VersionedInMemoryHexastore
 from hexastore.model import Key
 from hexastore.forward_reasoner import ForwardReasoner
 from hexastore.util import triple_map, plot
@@ -50,7 +50,7 @@ def parent_sibling_rule(store, s, p, o, insert):
 @pytest.mark.forward_reasoner
 @pytest.mark.skip
 def test_forward_reasoner_with_one_parent_delete():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = ForwardReasoner(store)
 
     reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
@@ -67,7 +67,7 @@ def test_forward_reasoner_with_one_parent_delete():
 
     pprint(list(store.triples()))
 
-    expected_store = InMemoryHexastore()
+    expected_store = VersionedInMemoryHexastore()
     expected_store.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
     expected_store.insert(CHILDREN, INVERSE_OF, PARENT, 1)
     expected_store.insert(PARENT, INVERSE_OF, CHILDREN, 1)
@@ -88,7 +88,7 @@ def test_forward_reasoner_with_one_parent_delete():
 @pytest.mark.forward_reasoner
 @pytest.mark.skip
 def test_forward_reasoner_with_children_and_delete():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = ForwardReasoner(store)
 
     reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
@@ -105,7 +105,7 @@ def test_forward_reasoner_with_children_and_delete():
 
     reasoner.delete(D, PARENT, A, 6)
 
-    expected_store = InMemoryHexastore()
+    expected_store = VersionedInMemoryHexastore()
     expected_store.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
     expected_store.insert(CHILDREN, INVERSE_OF, PARENT, 1)
     expected_store.insert(PARENT, INVERSE_OF, CHILDREN, 1)
@@ -265,7 +265,7 @@ def _get_many(hexastore, s, p):
 
 @pytest.mark.forward_reasoner
 def test_forward_reasoner_inferred_child_with_delete():
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = ForwardReasoner(store)
 
     reasoner.insert(A, SPOUSE, B, 1)

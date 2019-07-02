@@ -3,7 +3,7 @@ import tempfile
 import pytest
 
 from hexastore.ast import IRI, Variable, OrderCondition, Order
-from hexastore.memory import InMemoryHexastore
+from hexastore.memory import VersionedInMemoryHexastore
 from hexastore.engine import execute, Stats
 
 
@@ -25,7 +25,7 @@ WORKS_FOR = IRI("https://schema.org/worksFor")
 
 @pytest.fixture
 def store():
-    hexastore = InMemoryHexastore()
+    hexastore = VersionedInMemoryHexastore()
     hexastore.insert(DAVE_SMITH, TYPE, PERSON, 0)
     hexastore.insert(DAVE_SMITH, NAME, "Dave Smith", 1)
 

@@ -1,7 +1,7 @@
 import pytest
 
 from hexastore.ast import IRI, TripleStatus, TripleStatusItem, BlankNode
-from hexastore.memory import InMemoryHexastore, TrunkPayload
+from hexastore.memory import VersionedInMemoryHexastore, TrunkPayload
 
 
 DAVE_SMITH = IRI("http://example.com/dave-smith")
@@ -30,8 +30,8 @@ TYPE = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
 
 
 @pytest.fixture
-def store():
-    hexastore = InMemoryHexastore()
+def versioned_store():
+    hexastore = VersionedInMemoryHexastore()
     hexastore.insert(DAVE_SMITH, TYPE, PERSON, 0)
     hexastore.insert(DAVE_SMITH, NAME, "Dave Smith", 1)
 
@@ -47,21 +47,21 @@ def store():
 
 
 @pytest.mark.memory
-def test_store(store):
-    assert len(store) == 8
+def test_store(versioned_store):
+    assert len(versioned_store) == 8
 
 
 @pytest.mark.memory
-def test_insert_existing_triple(store):
-    assert len(store) == 8
+def test_insert_existing_triple(versioned_store):
+    assert len(versioned_store) == 8
     # Inserting duplicate triple should not increment length
-    store.insert(DAVE_SMITH, NAME, "Dave Smith", 8)
-    assert len(store) == 8
+    versioned_store.insert(DAVE_SMITH, NAME, "Dave Smith", 8)
+    assert len(versioned_store) == 8
 
 
 @pytest.mark.memory
-def test_triples(store):
-    assert list(store.triples()) == [
+def test_triples(versioned_store):
+    assert list(versioned_store.triples()) == [
         (DAVE_SMITH, TYPE, PERSON),
         (DAVE_SMITH, KNOWS, ERIC_MILLER),
         (DAVE_SMITH, NAME, "Dave Smith"),
@@ -74,21 +74,21 @@ def test_triples(store):
 
 
 @pytest.mark.memory
-def test_index(store):
-    assert store.index((DAVE_SMITH, NAME, "Dave Smith")) == 2
-    assert store.index((DAVE_SMITH, NAME, "Eric Miller")) is None
+def test_index(versioned_store):
+    assert versioned_store.index((DAVE_SMITH, NAME, "Dave Smith")) == 2
+    assert versioned_store.index((DAVE_SMITH, NAME, "Eric Miller")) is None
 
 
 @pytest.mark.memory
-def test_contains(store):
-    assert (ERIC_MILLER, NAME, "Eric Miller") in store
-    assert (ERIC_MILLER, NAME, "Dave Smith") not in store
-    assert (ERIC_MILLER, TYPE, "Eric Miller") not in store
+def test_contains(versioned_store):
+    assert (ERIC_MILLER, NAME, "Eric Miller") in versioned_store
+    assert (ERIC_MILLER, NAME, "Dave Smith") not in versioned_store
+    assert (ERIC_MILLER, TYPE, "Eric Miller") not in versioned_store
 
 
 @pytest.mark.memory
-def test_terms(store):
-    assert list(store.terms()) == [
+def test_terms(versioned_store):
+    assert list(versioned_store.terms()) == [
         DAVE_SMITH,
         ERIC_MILLER,
         TYPE,
@@ -109,8 +109,8 @@ def _make_status(index, valid_to=None):
 
 
 @pytest.mark.memory
-def test_spo(store):
-    assert store.spo == {
+def test_spo(versioned_store):
+    assert versioned_store.spo == {
         DAVE_SMITH: TrunkPayload(
             {
                 TYPE: {PERSON: _make_status(0)},
@@ -133,8 +133,8 @@ def test_spo(store):
 
 
 @pytest.mark.memory
-def test_sop(store):
-    assert store.sop == {
+def test_sop(versioned_store):
+    assert versioned_store.sop == {
         DAVE_SMITH: TrunkPayload(
             {
                 PERSON: {TYPE: _make_status(0)},
@@ -157,8 +157,8 @@ def test_sop(store):
 
 
 @pytest.mark.memory
-def test_pos(store):
-    assert store.pos == {
+def test_pos(versioned_store):
+    assert versioned_store.pos == {
         KNOWS: TrunkPayload(
             {ERIC_MILLER: {DAVE_SMITH: _make_status(6)}, DAVE_SMITH: {ERIC_MILLER: _make_status(7)}}, 2
         ),
@@ -172,8 +172,8 @@ def test_pos(store):
 
 
 @pytest.mark.memory
-def test_pso(store):
-    assert store.pso == {
+def test_pso(versioned_store):
+    assert versioned_store.pso == {
         KNOWS: TrunkPayload(
             {ERIC_MILLER: {DAVE_SMITH: _make_status(7)}, DAVE_SMITH: {ERIC_MILLER: _make_status(6)}}, 2
         ),
@@ -187,8 +187,8 @@ def test_pso(store):
 
 
 @pytest.mark.memory
-def test_osp(store):
-    assert store.osp == {
+def test_osp(versioned_store):
+    assert versioned_store.osp == {
         "Dave Smith": TrunkPayload({DAVE_SMITH: {NAME: _make_status(1)}}, 1),
         "Dr": TrunkPayload({ERIC_MILLER: {TITLE: _make_status(5)}}, 1),
         "Eric Miller": TrunkPayload({ERIC_MILLER: {NAME: _make_status(3)}}, 1),
@@ -200,8 +200,8 @@ def test_osp(store):
 
 
 @pytest.mark.memory
-def test_ops(store):
-    assert store.ops == {
+def test_ops(versioned_store):
+    assert versioned_store.ops == {
         "Dave Smith": TrunkPayload({NAME: {DAVE_SMITH: _make_status(1)}}, 1),
         "Dr": TrunkPayload({TITLE: {ERIC_MILLER: _make_status(5)}}, 1),
         "Eric Miller": TrunkPayload({NAME: {ERIC_MILLER: _make_status(3)}}, 1),
@@ -213,42 +213,42 @@ def test_ops(store):
 
 
 @pytest.mark.memory
-def test_delete(store):
-    assert len(store) == 8
+def test_delete(versioned_store):
+    assert len(versioned_store) == 8
 
-    store.delete(DAVE_SMITH, KNOWS, ERIC_MILLER, 8)
-    store.delete(ERIC_MILLER, KNOWS, DAVE_SMITH, 9)
+    versioned_store.delete(DAVE_SMITH, KNOWS, ERIC_MILLER, 8)
+    versioned_store.delete(ERIC_MILLER, KNOWS, DAVE_SMITH, 9)
 
-    assert len(store) == 6
+    assert len(versioned_store) == 6
 
-    assert store.spo[DAVE_SMITH][KNOWS][ERIC_MILLER] == _make_status(6, 8)
-    assert store.pos[KNOWS][ERIC_MILLER][DAVE_SMITH] == _make_status(6, 8)
-    assert store.osp[ERIC_MILLER][DAVE_SMITH][KNOWS] == _make_status(6, 8)
-    assert store.sop[DAVE_SMITH][ERIC_MILLER][KNOWS] == _make_status(6, 8)
-    assert store.pso[KNOWS][DAVE_SMITH][ERIC_MILLER] == _make_status(6, 8)
-    assert store.ops[ERIC_MILLER][KNOWS][DAVE_SMITH] == _make_status(6, 8)
+    assert versioned_store.spo[DAVE_SMITH][KNOWS][ERIC_MILLER] == _make_status(6, 8)
+    assert versioned_store.pos[KNOWS][ERIC_MILLER][DAVE_SMITH] == _make_status(6, 8)
+    assert versioned_store.osp[ERIC_MILLER][DAVE_SMITH][KNOWS] == _make_status(6, 8)
+    assert versioned_store.sop[DAVE_SMITH][ERIC_MILLER][KNOWS] == _make_status(6, 8)
+    assert versioned_store.pso[KNOWS][DAVE_SMITH][ERIC_MILLER] == _make_status(6, 8)
+    assert versioned_store.ops[ERIC_MILLER][KNOWS][DAVE_SMITH] == _make_status(6, 8)
 
-    assert store.spo[ERIC_MILLER][KNOWS][DAVE_SMITH] == _make_status(7, 9)
-    assert store.pos[KNOWS][DAVE_SMITH][ERIC_MILLER] == _make_status(7, 9)
-    assert store.osp[DAVE_SMITH][ERIC_MILLER][KNOWS] == _make_status(7, 9)
-    assert store.sop[ERIC_MILLER][DAVE_SMITH][KNOWS] == _make_status(7, 9)
-    assert store.pso[KNOWS][ERIC_MILLER][DAVE_SMITH] == _make_status(7, 9)
-    assert store.ops[DAVE_SMITH][KNOWS][ERIC_MILLER] == _make_status(7, 9)
+    assert versioned_store.spo[ERIC_MILLER][KNOWS][DAVE_SMITH] == _make_status(7, 9)
+    assert versioned_store.pos[KNOWS][DAVE_SMITH][ERIC_MILLER] == _make_status(7, 9)
+    assert versioned_store.osp[DAVE_SMITH][ERIC_MILLER][KNOWS] == _make_status(7, 9)
+    assert versioned_store.sop[ERIC_MILLER][DAVE_SMITH][KNOWS] == _make_status(7, 9)
+    assert versioned_store.pso[KNOWS][ERIC_MILLER][DAVE_SMITH] == _make_status(7, 9)
+    assert versioned_store.ops[DAVE_SMITH][KNOWS][ERIC_MILLER] == _make_status(7, 9)
 
 
 @pytest.mark.memory
-def test_delete_non_existent_triple_inserts_tombstone(store):
-    assert len(store) == 8
+def test_delete_non_existent_triple_inserts_tombstone(versioned_store):
+    assert len(versioned_store) == 8
 
-    store.delete(DAVE_SMITH, KNOWS, A, 8)
+    versioned_store.delete(DAVE_SMITH, KNOWS, A, 8)
 
-    assert len(store) == 8
-    assert not store.spo[DAVE_SMITH][KNOWS][A].inserted
+    assert len(versioned_store) == 8
+    assert not versioned_store.spo[DAVE_SMITH][KNOWS][A].inserted
 
 
 @pytest.fixture
 def store_with_inference():
-    hexastore = InMemoryHexastore()
+    hexastore = VersionedInMemoryHexastore()
     hexastore.insert(DAVE_SMITH, TYPE, PERSON, 0)
     hexastore.insert(DAVE_SMITH, NAME, "Dave Smith", 1)
 
@@ -272,7 +272,7 @@ def test_store_with_inference(store_with_inference):
 
 @pytest.fixture
 def store_family_tree():
-    hexastore = InMemoryHexastore()
+    hexastore = VersionedInMemoryHexastore()
     hexastore.insert(A, SPOUSE, B, 1)
     hexastore.insert(B, SPOUSE, A, 1)
     hexastore.insert((B, SPOUSE, A), INFERRED_FROM, (A, SPOUSE, B), 1)
@@ -324,7 +324,7 @@ def store_family_tree():
 
 @pytest.fixture
 def store_family_tree_bulk():
-    hexastore = InMemoryHexastore()
+    hexastore = VersionedInMemoryHexastore()
     hexastore.bulk_insert([(A, SPOUSE, B), (B, SPOUSE, A), ((B, SPOUSE, A), INFERRED_FROM, (A, SPOUSE, B))], 1)
     hexastore.bulk_insert([(C, PARENT, A), (A, CHILDREN, C), ((A, CHILDREN, C), INFERRED_FROM, (C, PARENT, A))], 2)
     hexastore.bulk_insert([(C, PARENT, B), (B, CHILDREN, C), ((B, CHILDREN, C), INFERRED_FROM, (C, PARENT, B))], 3)

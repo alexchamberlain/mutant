@@ -9,7 +9,7 @@ from lark import Lark, Token
 
 from hexastore.ast import IRI, LangTaggedString, TypedLiteral
 from hexastore.model import Key
-from hexastore.memory import InMemoryHexastore
+from hexastore.memory import VersionedInMemoryHexastore
 from hexastore.turtle import parse
 from hexastore.turtle_serialiser import serialise
 
@@ -32,7 +32,7 @@ def test_typed_literal():
         <http://bnb.data.bl.uk/id/person/%C3%96zbayKaan1964-/birth> <http://purl.org/vocab/bio/0.1/date> "1964"^^<http://www.w3.org/2001/XMLSchema#gYear> .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
 
     parse(document, lambda s, p, o: store.insert(s, p, o, 1))
 
@@ -53,7 +53,7 @@ def test_turtle_example_2():
             <http://example.org/#green-goblin> .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
 
     parse(document, lambda s, p, o: store.insert(s, p, o, 1))
 
@@ -74,7 +74,7 @@ def test_turtle_example_3():
             <http://xmlns.com/foaf/0.1/name> "Spiderman" .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
 
     parse(document, lambda s, p, o: store.insert(s, p, o, 1))
 
@@ -94,7 +94,7 @@ def test_turtle_example_4():
         <http://example.org/#spiderman> <http://xmlns.com/foaf/0.1/name> "Spiderman", "Человек-паук"@ru .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
 
     parse(document, lambda s, p, o: store.insert(s, p, o, 1))
 
@@ -116,7 +116,7 @@ def test_turtle_example_7():
         <http://example.org/#green-goblin> somePrefix:enemyOf <http://example.org/#spiderman> .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
 
     parse(document, lambda s, p, o: store.insert(s, p, o, 1))
 
@@ -137,7 +137,7 @@ def test_turtle_example_8():
         <http://example.org/#green-goblin> somePrefix:enemyOf <http://example.org/#spiderman> .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
 
     parse(document, lambda s, p, o: store.insert(s, p, o, 1))
 
@@ -178,7 +178,7 @@ def test_turtle_example_9():
         <http://伝言.example/?user=أكرم&amp;channel=R%26D> a :subject8 .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
 
     parse(document, lambda s, p, o: store.insert(s, p, o, 1))
 
@@ -234,7 +234,7 @@ def test_turtle_example_10():
         <http://example.org/#spiderman> foaf:name "Spiderman" .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
 
     parse(document, lambda s, p, o: store.insert(s, p, o, 1))
 
@@ -262,7 +262,7 @@ literal with many quotes (\"\"\"\"\")
 and up to two sequential apostrophes ('').''' .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
 
     parse(document, lambda s, p, o: store.insert(s, p, o, 1))
 
@@ -284,7 +284,7 @@ def test_turtle_example_12():
             :specificGravity 1.663E-4 .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
 
     parse(document, lambda s, p, o: store.insert(s, p, o, 1))
 
@@ -311,7 +311,7 @@ def test_turtleX_example_3():
             dct:source <http://example.net/homepage-listing.html> .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
 
     parse(document, lambda s, p, o: store.insert(s, p, o, 1))
 
@@ -343,7 +343,7 @@ def test_turtleX_example_3_serialise():
             dct:source <http://example.net/homepage-listing.html> .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
 
     parse(document, lambda s, p, o: store.insert(s, p, o, 1))
 

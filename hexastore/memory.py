@@ -43,17 +43,17 @@ _BranchMappingType = DefaultSortedMapping[Term, MutableOrderedMapping[Term, Trip
 _TrunkMappingType = DefaultSortedMapping[Term, TrunkPayload]
 
 
-def _BranchMapping(store: "InMemoryHexastore", natural: bool, leading_term: Term) -> MutableIndex:
+def _BranchMapping(store: "VersionedInMemoryHexastore", natural: bool, leading_term: Term) -> MutableIndex:
     return _BranchMappingType(lambda mid_term: store._list(leading_term, mid_term, natural), key=Key)
 
 
-def _TrunkMapping(store: "InMemoryHexastore", natural: bool) -> MutableIndex:
+def _TrunkMapping(store: "VersionedInMemoryHexastore", natural: bool) -> MutableIndex:
     return _TrunkMappingType(
         lambda leading_term: TrunkPayload(map=_BranchMapping(store, natural, leading_term)), key=Key
     )
 
 
-class InMemoryHexastore:
+class VersionedInMemoryHexastore:
     def __init__(self) -> None:
         self.n_triples: int = 0
 

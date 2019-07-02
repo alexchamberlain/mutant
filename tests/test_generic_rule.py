@@ -5,7 +5,7 @@ import pytest
 
 from hexastore import generic_rule
 from hexastore.ast import Variable, IRI
-from hexastore.memory import InMemoryHexastore
+from hexastore.memory import VersionedInMemoryHexastore
 from hexastore.namespace import Namespace
 from hexastore.forward_reasoner import ForwardReasoner
 
@@ -173,7 +173,7 @@ def test_sibling_symmetric_parse_and_register_1():
             → ($child2 schema:sibling $child1) .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = ForwardReasoner(store)
 
     generic_rule.parse_and_register(document, reasoner)
@@ -193,7 +193,7 @@ def test_sibling_symmetric_parse_and_register_many():
             → ($child1 schema:sibling $child2) .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = ForwardReasoner(store)
 
     generic_rule.parse_and_register(document, reasoner)
@@ -217,7 +217,7 @@ def test_sibling_symmetric_parse_and_register_combined():
             → ($child1 schema:sibling $child2) .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = ForwardReasoner(store)
 
     generic_rule.parse_and_register(document, reasoner)
@@ -240,7 +240,7 @@ def test_symmetric_register():
         ) .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = ForwardReasoner(store)
 
     generic_rule.parse_and_register(document, reasoner)
@@ -265,7 +265,7 @@ def test_recursive_recursive_rule_fails():
         ) .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = ForwardReasoner(store)
 
     generic_rule.parse_and_register(document, reasoner)
@@ -283,7 +283,7 @@ def test_fixed_subject():
         (example:A a $o) → ($o rdfs:subclassOf rdfs:Resource) .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = ForwardReasoner(store)
 
     generic_rule.parse_and_register(document, reasoner)
@@ -305,7 +305,7 @@ def test_fixed_object():
         ($s a schema:Person) → ($s a example:Person) .
     """
 
-    store = InMemoryHexastore()
+    store = VersionedInMemoryHexastore()
     reasoner = ForwardReasoner(store)
 
     generic_rule.parse_and_register(document, reasoner)
