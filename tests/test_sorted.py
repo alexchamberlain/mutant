@@ -7,7 +7,7 @@ import hypothesis.strategies as st
 from hexastore.sorted import SortedList, SortedMapping, Order
 
 
-@pytest.mark.memory
+@pytest.mark.sorted
 @pytest.mark.slow
 @given(st.lists(st.integers()))
 def test_SortedList(xs):
@@ -23,12 +23,12 @@ def test_SortedList(xs):
     assert ys == zs
 
 
-@pytest.mark.memory
+@pytest.mark.sorted
 def test_SortedList_equal():
     assert SortedList([1, 2, 3, 4, 5]) != 42
 
 
-@pytest.mark.memory
+@pytest.mark.sorted
 def test_SortedList_index():
     xs = list(range(10))
     random.shuffle(xs)
@@ -40,13 +40,13 @@ def test_SortedList_index():
     assert ys == [0, 1, 2, 4, 5, 6, 7, 8, 9]
 
 
-@pytest.mark.memory
+@pytest.mark.sorted
 def test_SortedList_iter():
     assert all(x == y for x, y in zip(SortedList([1, 2, 3, 4, 5]).iter(Order.ASCENDING), range(1, 6)))
     assert all(x == y for x, y in zip(SortedList([1, 2, 3, 4, 5]).iter(Order.DESCENDING), reversed(range(1, 6))))
 
 
-@pytest.mark.memory
+@pytest.mark.sorted
 @pytest.mark.slow
 @given(st.dictionaries(st.integers(), st.integers()))
 def test_SortedMapping(xs):
@@ -62,7 +62,7 @@ def test_SortedMapping(xs):
     assert all(v == xs[k] for k, v in ys.items())
 
 
-@pytest.mark.memory
+@pytest.mark.sorted
 def test_SortedMapping_simple():
     ys = SortedMapping()
     vv = ys.values()
@@ -86,7 +86,7 @@ def test_SortedMapping_simple():
     assert ys == {0: 0, 1: 1, 2: 4, 3: 9, 4: 16, 6: 36, 7: 49, 8: 64, 9: 81}
 
 
-@pytest.mark.memory
+@pytest.mark.sorted
 def test_SortedMapping_slice():
     ys = SortedMapping()
 
