@@ -43,11 +43,13 @@ _BranchMappingType = DefaultSortedMapping[Term, MutableOrderedMapping[Term, Trip
 _TrunkMappingType = DefaultSortedMapping[Term, TrunkPayload]
 
 
-def _BranchMapping(store: "VersionedInMemoryHexastore", natural: bool, leading_term: Term) -> MutableIndex:
+def _BranchMapping(
+    store: Union["VersionedInMemoryHexastore", "InMemoryHexastore"], natural: bool, leading_term: Term
+) -> MutableIndex:
     return _BranchMappingType(lambda mid_term: store._list(leading_term, mid_term, natural), key=Key)
 
 
-def _TrunkMapping(store: "VersionedInMemoryHexastore", natural: bool) -> MutableIndex:
+def _TrunkMapping(store: Union["VersionedInMemoryHexastore", "InMemoryHexastore"], natural: bool) -> MutableIndex:
     return _TrunkMappingType(
         lambda leading_term: TrunkPayload(map=_BranchMapping(store, natural, leading_term)), key=Key
     )
@@ -210,6 +212,147 @@ class VersionedInMemoryHexastore:
         return False
 
     def _list(self, s: Term, p: Term, natural: bool) -> SortedMapping[Term, TripleStatus]:
+        if not natural:
+            s, p = p, s
+
+        return self._lists[s][p]
+
+
+class InMemoryHexastore:
+    def __init__(self) -> None:
+        self.n_triples: int = 0
+
+        self.spo: MutableIndex = _TrunkMapping(self, True)
+        self.pos: MutableIndex = _TrunkMapping(self, True)
+        self.osp: MutableIndex = _TrunkMapping(self, True)
+        self.sop: MutableIndex = _TrunkMapping(self, False)
+        self.ops: MutableIndex = _TrunkMapping(self, False)
+        self.pso: MutableIndex = _TrunkMapping(self, False)
+
+        self._lists: Mapping[Term, Mapping[Term, SortedList[Term]]] = defaultdict(
+            lambda: defaultdict(lambda: SortedList(key=Key))
+        )
+
+    def __len__(self) -> int:
+        return self.n_triples
+
+    def index(self, triple: Triple) -> Optional[int]:
+        for i, t in enumerate(self.triples()):
+            if t == triple:
+                return i
+
+        return None
+
+    def bulk_insert(self, triples: List[Triple]) -> None:
+        sorted_triples = sorted(triples, key=functools.partial(triple_map, Key))
+
+        for s, s_triples in itertools.groupby(sorted_triples, key=lambda t: t[0]):
+            assert_tuple_length(s)
+
+            po_index = self.spo[s]
+            op_index = self.sop[s]
+
+            for p, p_triples in itertools.groupby(s_triples, key=lambda t: t[1]):
+                assert_tuple_length(p)
+
+                o_spo_index = po_index.map[p]
+
+                os_index = self.pos[p]
+                so_index = self.pso[p]
+
+                for _, _, o in p_triples:
+                    assert_tuple_length(o)
+
+                    _, inserted = o_spo_index.index_or_insert(o)
+                    if inserted:
+                        continue
+
+                    sp_index = self.osp[o]
+                    ps_index = self.ops[o]
+
+                    os_index.map[o].index_or_insert(s)
+                    sp_index.map[s].index_or_insert(p)
+
+                    self.n_triples += 1
+
+                    po_index.n += 1
+                    op_index.n += 1
+                    sp_index.n += 1
+                    ps_index.n += 1
+                    os_index.n += 1
+                    so_index.n += 1
+
+    def insert(self, s: Term, p: Term, o: Term) -> bool:
+        _, inserted = self.spo[s].map[p].index_or_insert(o)
+        if not inserted:
+            return False
+
+        assert_tuple_length(s)
+        assert_tuple_length(p)
+        assert_tuple_length(o)
+
+        self.spo[s].map[p].insert(o)
+        self.pos[p].map[o].insert(s)
+        self.osp[o].map[s].insert(p)
+
+        assert p in self.sop[s].map[o]
+        assert s in self.ops[o].map[p]
+        assert o in self.pso[p].map[s]
+
+        self.n_triples += 1
+
+        self.spo[s].n += 1
+        self.sop[s].n += 1
+        self.osp[o].n += 1
+        self.ops[o].n += 1
+        self.pos[p].n += 1
+        self.pso[p].n += 1
+
+        return True
+
+    def delete(self, s: Term, p: Term, o: Term) -> None:
+        if o not in self.spo[s][p]:
+            return
+
+        self.n_triples -= 1
+
+        self.spo[s].n -= 1
+        self.sop[s].n -= 1
+        self.osp[o].n -= 1
+        self.ops[o].n -= 1
+        self.pos[p].n -= 1
+        self.pso[p].n -= 1
+
+        self.spo[s].map[p].delete(o)
+        self.pos[p].map[o].delete(s)
+        self.osp[o].map[s].delete(p)
+
+        assert p in self.sop[s][o]
+        assert s in self.ops[o][p]
+        assert o in self.pso[p][s]
+
+    def terms(self) -> SortedList[Term]:
+        return SortedList(set(itertools.chain(self.spo.keys(), self.pos.keys(), self.osp.keys())), key=Key)
+
+    def triples(
+        self, index: Optional[MutableIndex] = None, order: Optional[Tuple[Order, Order, Order]] = None
+    ) -> Iterable[Triple]:
+        if index is None:
+            index = self.spo
+
+        if order is None:
+            order = (Order.ASCENDING, Order.ASCENDING, Order.ASCENDING)
+
+        for s, po in index.items(order=order[0]):
+            for p, o_list in po.items(order=order[1]):
+                for o in o_list.iter(order=order[2]):
+                    yield (s, p, o)
+
+    def __contains__(self, triple: Triple) -> bool:
+        s, p, o = triple
+        return o in self.spo[s][p]
+
+    def _list(self, s: Term, p: Term, natural: bool) -> SortedList[Term]:
         if not natural:
             s, p = p, s
 

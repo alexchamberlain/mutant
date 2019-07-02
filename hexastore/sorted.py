@@ -60,6 +60,12 @@ class SortedList(Sequence[T], AbstractSet[T]):
 
     def __delitem__(self, index: int) -> None:
         del self._l[index]
+        del self._keys[index]
+
+    def delete(self, x: T) -> None:
+        i = self.index(x)
+        del self._l[i]
+        del self._keys[i]
 
     def __iter__(self) -> Iterator[T]:
         return iter(self._l)

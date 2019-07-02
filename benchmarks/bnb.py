@@ -3,7 +3,7 @@ import logging
 import time
 
 from hexastore import turtle
-from hexastore.memory import VersionedInMemoryHexastore
+from hexastore.memory import InMemoryHexastore
 
 from rdflib.graph import Graph
 
@@ -32,7 +32,7 @@ root.addHandler(handler)
 
 try:
     with Timer() as t:
-        store = VersionedInMemoryHexastore()
+        store = InMemoryHexastore()
 
         with Timer() as t1:
             triples = []
@@ -42,7 +42,7 @@ try:
         logger.info(f"library=mutant-parse time={t1.interval}")
 
         with Timer() as t2:
-            store.bulk_insert(triples, 1)
+            store.bulk_insert(triples)
 
         logger.info(f"library=mutant-bulk-insert time={t2.interval}")
 finally:
