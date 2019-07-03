@@ -3,7 +3,7 @@ attrs==19.1.0
 cffi==1.12.3
 Click==7.0
 dataclasses==0.6; python_version < '3.7'
-greenlet==0.4.13
+greenlet==0.4.15
 hypothesis==4.24.5
 lark-parser==0.7.1
 more-itertools==7.1.0
