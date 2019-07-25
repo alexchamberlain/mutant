@@ -55,7 +55,7 @@ def test_store(store):
 def test_insert_existing_triple(store):
     assert len(store) == 8
     # Inserting duplicate triple should not increment length
-    store.insert(DAVE_SMITH, NAME, "Dave Smith")
+    assert not store.insert(DAVE_SMITH, NAME, "Dave Smith")
     assert len(store) == 8
 
 
@@ -181,19 +181,19 @@ def test_delete(store):
 
     assert len(store) == 6
 
-    assert ERIC_MILLER in store.spo[DAVE_SMITH][KNOWS]
-    assert DAVE_SMITH in store.pos[KNOWS][ERIC_MILLER]
-    assert KNOWS in store.osp[ERIC_MILLER][DAVE_SMITH]
-    assert KNOWS in store.sop[DAVE_SMITH][ERIC_MILLER]
-    assert ERIC_MILLER in store.pso[KNOWS][DAVE_SMITH]
-    assert DAVE_SMITH in store.ops[ERIC_MILLER][KNOWS]
+    assert ERIC_MILLER not in store.spo[DAVE_SMITH][KNOWS]
+    assert DAVE_SMITH not in store.pos[KNOWS][ERIC_MILLER]
+    assert KNOWS not in store.osp[ERIC_MILLER][DAVE_SMITH]
+    assert KNOWS not in store.sop[DAVE_SMITH][ERIC_MILLER]
+    assert ERIC_MILLER not in store.pso[KNOWS][DAVE_SMITH]
+    assert DAVE_SMITH not in store.ops[ERIC_MILLER][KNOWS]
 
-    assert DAVE_SMITH in store.spo[ERIC_MILLER][KNOWS]
-    assert ERIC_MILLER in store.pos[KNOWS][DAVE_SMITH]
-    assert KNOWS in store.osp[DAVE_SMITH][ERIC_MILLER]
-    assert KNOWS in store.sop[ERIC_MILLER][DAVE_SMITH]
-    assert DAVE_SMITH in store.pso[KNOWS][ERIC_MILLER]
-    assert ERIC_MILLER in store.ops[DAVE_SMITH][KNOWS]
+    assert DAVE_SMITH not in store.spo[ERIC_MILLER][KNOWS]
+    assert ERIC_MILLER not in store.pos[KNOWS][DAVE_SMITH]
+    assert KNOWS not in store.osp[DAVE_SMITH][ERIC_MILLER]
+    assert KNOWS not in store.sop[ERIC_MILLER][DAVE_SMITH]
+    assert DAVE_SMITH not in store.pso[KNOWS][ERIC_MILLER]
+    assert ERIC_MILLER not in store.ops[DAVE_SMITH][KNOWS]
 
 
 @pytest.mark.memory
@@ -224,12 +224,12 @@ def versioned_store():
 
 
 @pytest.mark.memory
-def test_store(versioned_store):
+def test_store_versioned_store(versioned_store):
     assert len(versioned_store) == 8
 
 
 @pytest.mark.memory
-def test_insert_existing_triple(versioned_store):
+def test_insert_existing_triple_versioned_store(versioned_store):
     assert len(versioned_store) == 8
     # Inserting duplicate triple should not increment length
     versioned_store.insert(DAVE_SMITH, NAME, "Dave Smith", 8)
@@ -237,7 +237,7 @@ def test_insert_existing_triple(versioned_store):
 
 
 @pytest.mark.memory
-def test_triples(versioned_store):
+def test_triples_versioned_store(versioned_store):
     assert list(versioned_store.triples()) == [
         (DAVE_SMITH, TYPE, PERSON),
         (DAVE_SMITH, KNOWS, ERIC_MILLER),
@@ -251,20 +251,20 @@ def test_triples(versioned_store):
 
 
 @pytest.mark.memory
-def test_index(versioned_store):
+def test_index_versioned_store(versioned_store):
     assert versioned_store.index((DAVE_SMITH, NAME, "Dave Smith")) == 2
     assert versioned_store.index((DAVE_SMITH, NAME, "Eric Miller")) is None
 
 
 @pytest.mark.memory
-def test_contains(versioned_store):
+def test_contains_versioned_store(versioned_store):
     assert (ERIC_MILLER, NAME, "Eric Miller") in versioned_store
     assert (ERIC_MILLER, NAME, "Dave Smith") not in versioned_store
     assert (ERIC_MILLER, TYPE, "Eric Miller") not in versioned_store
 
 
 @pytest.mark.memory
-def test_terms(versioned_store):
+def test_terms_versioned_store(versioned_store):
     assert list(versioned_store.terms()) == [
         DAVE_SMITH,
         ERIC_MILLER,
@@ -286,7 +286,7 @@ def _make_status(index, valid_to=None):
 
 
 @pytest.mark.memory
-def test_spo(versioned_store):
+def test_spo_versioned_store(versioned_store):
     assert versioned_store.spo == {
         DAVE_SMITH: TrunkPayload(
             {
@@ -310,7 +310,7 @@ def test_spo(versioned_store):
 
 
 @pytest.mark.memory
-def test_sop(versioned_store):
+def test_sop_versioned_store(versioned_store):
     assert versioned_store.sop == {
         DAVE_SMITH: TrunkPayload(
             {
@@ -334,7 +334,7 @@ def test_sop(versioned_store):
 
 
 @pytest.mark.memory
-def test_pos(versioned_store):
+def test_pos_versioned_store(versioned_store):
     assert versioned_store.pos == {
         KNOWS: TrunkPayload(
             {ERIC_MILLER: {DAVE_SMITH: _make_status(6)}, DAVE_SMITH: {ERIC_MILLER: _make_status(7)}}, 2
@@ -349,7 +349,7 @@ def test_pos(versioned_store):
 
 
 @pytest.mark.memory
-def test_pso(versioned_store):
+def test_pso_versioned_store(versioned_store):
     assert versioned_store.pso == {
         KNOWS: TrunkPayload(
             {ERIC_MILLER: {DAVE_SMITH: _make_status(7)}, DAVE_SMITH: {ERIC_MILLER: _make_status(6)}}, 2
@@ -364,7 +364,7 @@ def test_pso(versioned_store):
 
 
 @pytest.mark.memory
-def test_osp(versioned_store):
+def test_osp_versioned_store(versioned_store):
     assert versioned_store.osp == {
         "Dave Smith": TrunkPayload({DAVE_SMITH: {NAME: _make_status(1)}}, 1),
         "Dr": TrunkPayload({ERIC_MILLER: {TITLE: _make_status(5)}}, 1),
@@ -377,7 +377,7 @@ def test_osp(versioned_store):
 
 
 @pytest.mark.memory
-def test_ops(versioned_store):
+def test_ops_versioned_store(versioned_store):
     assert versioned_store.ops == {
         "Dave Smith": TrunkPayload({NAME: {DAVE_SMITH: _make_status(1)}}, 1),
         "Dr": TrunkPayload({TITLE: {ERIC_MILLER: _make_status(5)}}, 1),
@@ -390,7 +390,7 @@ def test_ops(versioned_store):
 
 
 @pytest.mark.memory
-def test_delete(versioned_store):
+def test_delete_versioned_store(versioned_store):
     assert len(versioned_store) == 8
 
     versioned_store.delete(DAVE_SMITH, KNOWS, ERIC_MILLER, 8)

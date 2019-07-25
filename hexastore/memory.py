@@ -112,6 +112,10 @@ class VersionedInMemoryHexastore:
                     os_index.map[o][s] = status
                     sp_index.map[s][p] = status
 
+                    assert p in op_index.map[o]
+                    assert s in ps_index.map[p]
+                    assert o in so_index.map[s]
+
                     self.n_triples += 1
 
                     po_index.n += 1
@@ -202,6 +206,7 @@ class VersionedInMemoryHexastore:
                         yield (s, p, o)
 
     def __contains__(self, triple: Triple) -> bool:
+        assert isinstance(triple, tuple)
         if triple[2] in self.spo[triple[0]][triple[1]]:
             status = self.spo[triple[0]][triple[1]][triple[2]]
             if len(status.statuses) > 0:
@@ -264,7 +269,7 @@ class InMemoryHexastore:
                     assert_tuple_length(o)
 
                     _, inserted = o_spo_index.index_or_insert(o)
-                    if inserted:
+                    if not inserted:
                         continue
 
                     sp_index = self.osp[o]
@@ -272,6 +277,10 @@ class InMemoryHexastore:
 
                     os_index.map[o].index_or_insert(s)
                     sp_index.map[s].index_or_insert(p)
+
+                    assert p in self.sop[s].map[o]
+                    assert s in self.ops[o].map[p]
+                    assert o in self.pso[p].map[s]
 
                     self.n_triples += 1
 
@@ -283,15 +292,14 @@ class InMemoryHexastore:
                     so_index.n += 1
 
     def insert(self, s: Term, p: Term, o: Term) -> bool:
+        assert_tuple_length(o)
         _, inserted = self.spo[s].map[p].index_or_insert(o)
         if not inserted:
             return False
 
         assert_tuple_length(s)
         assert_tuple_length(p)
-        assert_tuple_length(o)
 
-        self.spo[s].map[p].insert(o)
         self.pos[p].map[o].insert(s)
         self.osp[o].map[s].insert(p)
 
@@ -327,9 +335,9 @@ class InMemoryHexastore:
         self.pos[p].map[o].delete(s)
         self.osp[o].map[s].delete(p)
 
-        assert p in self.sop[s][o]
-        assert s in self.ops[o][p]
-        assert o in self.pso[p][s]
+        assert p not in self.sop[s][o]
+        assert s not in self.ops[o][p]
+        assert o not in self.pso[p][s]
 
     def terms(self) -> SortedList[Term]:
         return SortedList(set(itertools.chain(self.spo.keys(), self.pos.keys(), self.osp.keys())), key=Key)
