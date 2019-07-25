@@ -6,7 +6,7 @@ dataclasses==0.6; python_version < '3.7'
 greenlet==0.4.13
 hypothesis==4.31.0
 lark-parser==0.7.1
-more-itertools==7.1.0
+more-itertools==7.2.0
 pluggy==0.12.0
 py==1.8.0
 pytest==5.0.1
