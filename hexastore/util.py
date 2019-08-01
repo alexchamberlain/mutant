@@ -1,7 +1,13 @@
 import itertools
 from typing import Callable, Tuple, TypeVar
 
+from .ast import IRI
 from .model import Key
+
+TYPE = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
+
+LABEL = IRI("http://www.w3.org/2000/01/rdf-schema#label")
+SUBCLASS_OF = IRI("http://www.w3.org/2000/01/rdf-schema#subclassOf")
 
 T = TypeVar("T")
 U = TypeVar("U")

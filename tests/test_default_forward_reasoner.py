@@ -2,7 +2,7 @@ import pytest
 
 from hexastore.ast import IRI, Variable
 from hexastore.blank_node_factory import BlankNodeFactory
-from hexastore.default_forward_reasoner import default_forward_reasoner
+from hexastore.default_forward_reasoner import make_default_forward_reasoner
 from hexastore.memory import InMemoryHexastore
 
 A = IRI("http://example.com/A")
@@ -42,7 +42,7 @@ def store():
 
 @pytest.fixture
 def reasoner(store):
-    return default_forward_reasoner(store)
+    return make_default_forward_reasoner(store)
 
 
 def parent_sibling_rule(store, s, p, o):

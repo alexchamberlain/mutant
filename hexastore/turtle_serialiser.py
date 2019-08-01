@@ -96,9 +96,6 @@ class _Serialiser:
         elif isinstance(t, LangTaggedString):
             return f'"{t.value}"@{t.language}'
         else:
-            import pdb
-
-            pdb.set_trace()
             raise TypeError(f"Unknown type {type(t)} ({t})")
 
 
