@@ -130,7 +130,7 @@ The only option right now is to dump the store again, and re-run the rules from 
 
 To get out ahead of this one, Python was used simply because it's the language I'm most comfortable with and productive in. In this PoC, I wanted to concentrate on the datastructures in use, rather than top notch performance. It also has some amazing patterns, such as the Sequence and Mapping Protocols, that make implementing a Hexastore quite elegant.
 
-[1]: http://www.vldb.org/pvldb/1/1453965.pdf
+[1]: https://people.csail.mit.edu/tdanford/6830papers/weiss-hexastore.pdf
 [2]: https://en.wikipedia.org/wiki/Datalog
 [3]: https://arxiv.org/pdf/1406.3399.pdf
 [4]: https://wiki.blazegraph.com/wiki/index.php/Reification_Done_Right
