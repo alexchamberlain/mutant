@@ -25,11 +25,10 @@ def test_Key():
 def test_Solution():
     s = Solution({Variable("A"): A}, [], set())
 
-    assert s.copy() is not s
-    assert s.copy() == s
+    assert s.mutate({}) is not s
+    assert s.mutate({}) == s
 
-    sp = s.copy()
-    sp.update({Variable("B"): B})
+    sp = s.mutate({Variable("B"): B})
 
     assert s != sp
     assert sp.get(Variable("B")) == B

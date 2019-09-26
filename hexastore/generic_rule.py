@@ -140,18 +140,18 @@ class GeneralRule1(_BaseRule):
         logger.debug(f"Applying {self} to {s}, {p}, {o}")
 
         if isinstance(self._s, Variable):
-            solution = Solution({self._s: s}, [], {(s, p, o)})
+            solution = {self._s: s}
         elif s != self._s:
             return
         else:
-            solution = Solution({}, [], {(s, p, o)})
+            solution = {}
 
         if isinstance(self._o, Variable):
             solution.update({self._o: o})
         elif o != self._o:
             return
 
-        self.apply_solution(store, solution, ((s, p, o),))
+        self.apply_solution(store, Solution(solution, [], {(s, p, o)}), ((s, p, o),))
 
 
 class RecursiveRule1:
@@ -195,16 +195,18 @@ class RecursiveRule1:
         logger.debug(f"Applying {self} to {s}, {p}, {o}")
 
         if isinstance(self._s, Variable):
-            solution = Solution({self._s: s}, [], {(s, p, o)})
+            solution = {self._s: s}
         elif s != self._s:
             return
         else:
-            solution = Solution({}, [], {(s, p, o)})
+            solution = {}
 
         if isinstance(self._o, Variable):
             solution.update({self._o: o})
         elif o != self._o:
             return
+
+        solution = Solution(solution, [], {(s, p, o)})
 
         if not _test_constraints(self._constraints, solution):
             return
@@ -259,16 +261,18 @@ class GeneralRuleMany(_BaseRule):
         logger.debug(f"Applying {self} to {s}, {p}, {o}")
 
         if isinstance(self._s, Variable):
-            solution = Solution({self._s: s}, [], {(s, p, o)})
+            solution = {self._s: s}
         elif s != self._s:
             return
         else:
-            solution = Solution({}, [], {(s, p, o)})
+            solution = {}
 
         if isinstance(self._o, Variable):
             solution.update({self._o: o})
         elif o != self._o:
             return
+
+        solution = Solution(solution, [], {(s, p, o)})
 
         patterns = [_resolve(triple_pattern, solution) for triple_pattern in self._rest]
         logger.debug(f"patterns {patterns}")

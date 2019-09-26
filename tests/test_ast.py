@@ -80,7 +80,7 @@ def test_Solution():
 
     assert (
         repr(Solution({Variable("s"): ERIC_MILLER}, [], {(ERIC_MILLER, KNOWS, DAVE_SMITH)}))
-        == "Solution({Variable(value='s'): IRI(value='http://example.com/eric-miller')}, ..., {(IRI(value='http://example.com/eric-miller'), IRI(value='http://xmlns.com/foaf/0.1/knows'), IRI(value='http://example.com/dave-smith'))})"
+        == "Solution({Variable(value='s'): IRI(value='http://example.com/eric-miller')}, ...)"
     )
 
 

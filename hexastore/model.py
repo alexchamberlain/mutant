@@ -1,5 +1,8 @@
+import io
 import functools
 from typing import List, Dict, Union, Optional, Tuple, overload, TypeVar, AbstractSet
+
+from immutables import Map
 
 from .ast import TYPE_ORDER_MAP, Order, Variable, OrderCondition
 from .typing import Term, Triple
@@ -53,31 +56,34 @@ class Key:
 
 @functools.total_ordering
 class Solution:
-    def __init__(self, d: Dict[Variable, Term], o: List[OrderCondition], triples: AbstractSet[Triple]):
-        self._d = d
+    def __init__(
+        self, d: Union[Map[Variable, Term], Dict[Variable, Term]], o: List[OrderCondition], triples: AbstractSet[Triple]
+    ):
+        self._d = d if isinstance(d, Map) else Map(d)
         self._o = o
         self._triples = triples
 
-        assert all(len(t) == 3 for t in triples)
-
-    def copy(self) -> "Solution":
-        return Solution(self._d.copy(), self._o, self._triples)
-
-    def update(self, other: Union[Dict[Variable, Term], "Solution"]) -> None:
+    def mutate(self, other: Union[Dict[Variable, Term], "Solution"]) -> "Solution":
         if isinstance(other, Solution):
             # self._d.update(other._d)
-            self._triples.update(other._triples)
+            triples = self._triples | other._triples
 
-            other_d = other._d
+            other_d: Union[Map[Variable, Term], Dict[Variable, Term]] = other._d
         else:
-            # self._d.update(other)
             other_d = other
+            triples = self._triples
 
-        for k, v in other_d.items():
-            if k in self._d:
-                assert self._d[k] == v
+        with self._d.mutate() as mm:
+            for k, v in other_d.items():
+                if k in mm:
+                    assert mm[k] == v
+                    continue
 
-            self._d[k] = v
+                mm[k] = v
+
+            d = mm.finish()
+
+        return Solution(d, self._o, triples)
 
     @overload
     def get(self, key: Variable, default: Term) -> Term:
@@ -102,7 +108,7 @@ class Solution:
         return sorted(self._d.items(), key=lambda x: x[0])
 
     def variables(self):
-        return self._d.keys()
+        return set(self._d.keys())
 
     @property
     def triples(self):
@@ -111,11 +117,16 @@ class Solution:
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Solution):
             return self._d == other._d and self._triples == other._triples
-        else:
-            return self._d == other
+
+        if isinstance(other, dict):
+            return len(self._d) == len(other) and all(v == other[k] for k, v in self._d.items())
+
+        return NotImplemented
 
     def __repr__(self) -> str:
-        return "Solution({!r}, ..., {!r})".format(self._d, self._triples)
+        d = ",".join(f"{k!r}: {v!r}" for k, v in self._d.items())
+
+        return f"Solution({{{d}}}, ...)"
 
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, Solution):

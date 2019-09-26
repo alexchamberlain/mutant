@@ -178,9 +178,7 @@ class _Merge:
         self.lhs = lhs
 
     def __call__(self, rhs: Solution) -> Solution:
-        z = self.lhs.copy()
-        z.update(rhs)
-        return z
+        return self.lhs.mutate(rhs)
 
 
 @dataclass
