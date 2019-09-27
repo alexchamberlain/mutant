@@ -1,6 +1,7 @@
 import pytest
 
-from hexastore.ast import IRI, TripleStatus, TripleStatusItem, BlankNode
+from hexastore.ast import IRI, TripleStatus, TripleStatusItem
+from hexastore.blank_node_factory import BlankNodeFactory
 from hexastore.memory import VersionedInMemoryHexastore, TrunkPayload, InMemoryHexastore
 
 
@@ -31,7 +32,8 @@ TYPE = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
 
 @pytest.fixture
 def store():
-    hexastore = InMemoryHexastore()
+    blank_node_factory = BlankNodeFactory()
+    hexastore = InMemoryHexastore(blank_node_factory)
     hexastore.insert(DAVE_SMITH, TYPE, PERSON)
     hexastore.insert(DAVE_SMITH, NAME, "Dave Smith")
 
@@ -208,7 +210,8 @@ def test_delete_non_existent_triple_doesnt_fail(store):
 
 @pytest.fixture
 def versioned_store():
-    hexastore = VersionedInMemoryHexastore()
+    blank_node_factory = BlankNodeFactory()
+    hexastore = VersionedInMemoryHexastore(blank_node_factory)
     hexastore.insert(DAVE_SMITH, TYPE, PERSON, 0)
     hexastore.insert(DAVE_SMITH, NAME, "Dave Smith", 1)
 
@@ -425,7 +428,8 @@ def test_delete_non_existent_triple_inserts_tombstone(versioned_store):
 
 @pytest.fixture
 def store_with_inference():
-    hexastore = VersionedInMemoryHexastore()
+    blank_node_factory = BlankNodeFactory()
+    hexastore = VersionedInMemoryHexastore(blank_node_factory)
     hexastore.insert(DAVE_SMITH, TYPE, PERSON, 0)
     hexastore.insert(DAVE_SMITH, NAME, "Dave Smith", 1)
 
@@ -449,7 +453,8 @@ def test_store_with_inference(store_with_inference):
 
 @pytest.fixture
 def store_family_tree():
-    hexastore = VersionedInMemoryHexastore()
+    blank_node_factory = BlankNodeFactory()
+    hexastore = VersionedInMemoryHexastore(blank_node_factory)
     hexastore.insert(A, SPOUSE, B, 1)
     hexastore.insert(B, SPOUSE, A, 1)
     hexastore.insert((B, SPOUSE, A), INFERRED_FROM, (A, SPOUSE, B), 1)
@@ -468,13 +473,13 @@ def store_family_tree():
     hexastore.insert(D, SIBLING, C, 4)
     hexastore.insert((A, CHILDREN, D), INFERRED_FROM, (D, PARENT, A), 4)
 
-    node = BlankNode()
+    node = blank_node_factory()
     hexastore.insert(node, TYPE, BAG, 4)
     hexastore.insert((C, SIBLING, D), INFERRED_FROM, node, 4)
     hexastore.insert(node, _li(1), (D, PARENT, A), 4)
     hexastore.insert(node, _li(2), (C, PARENT, A), 4)
 
-    node = BlankNode()
+    node = blank_node_factory()
     hexastore.insert(node, TYPE, BAG, 4)
     hexastore.insert((D, SIBLING, C), INFERRED_FROM, node, 4)
     hexastore.insert(node, _li(1), (D, PARENT, A), 4)
@@ -484,13 +489,13 @@ def store_family_tree():
     hexastore.insert(B, CHILDREN, D, 5)
     hexastore.insert((B, CHILDREN, D), INFERRED_FROM, (D, PARENT, B), 5)
 
-    node = BlankNode()
+    node = blank_node_factory()
     hexastore.insert(node, TYPE, BAG, 5)
     hexastore.insert((C, SIBLING, D), INFERRED_FROM, node, 5)
     hexastore.insert(node, _li(1), (D, PARENT, B), 5)
     hexastore.insert(node, _li(2), (C, PARENT, B), 5)
 
-    node = BlankNode()
+    node = blank_node_factory()
     hexastore.insert(node, TYPE, BAG, 5)
     hexastore.insert((D, SIBLING, C), INFERRED_FROM, node, 5)
     hexastore.insert(node, _li(1), (D, PARENT, B), 5)
@@ -501,13 +506,14 @@ def store_family_tree():
 
 @pytest.fixture
 def store_family_tree_bulk():
-    hexastore = VersionedInMemoryHexastore()
+    blank_node_factory = BlankNodeFactory()
+    hexastore = VersionedInMemoryHexastore(blank_node_factory)
     hexastore.bulk_insert([(A, SPOUSE, B), (B, SPOUSE, A), ((B, SPOUSE, A), INFERRED_FROM, (A, SPOUSE, B))], 1)
     hexastore.bulk_insert([(C, PARENT, A), (A, CHILDREN, C), ((A, CHILDREN, C), INFERRED_FROM, (C, PARENT, A))], 2)
     hexastore.bulk_insert([(C, PARENT, B), (B, CHILDREN, C), ((B, CHILDREN, C), INFERRED_FROM, (C, PARENT, B))], 3)
 
-    node1 = BlankNode()
-    node2 = BlankNode()
+    node1 = blank_node_factory()
+    node2 = blank_node_factory()
     hexastore.bulk_insert(
         [
             (D, PARENT, A),
@@ -527,8 +533,8 @@ def store_family_tree_bulk():
         4,
     )
 
-    node3 = BlankNode()
-    node4 = BlankNode()
+    node3 = blank_node_factory()
+    node4 = blank_node_factory()
 
     hexastore.bulk_insert(
         [

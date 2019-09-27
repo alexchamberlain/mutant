@@ -1,3 +1,5 @@
+from unittest import mock
+
 from hexastore.ast import IRI, Variable, BlankNode, TripleStatus, TripleStatusItem
 from hexastore.model import Solution, Key
 
@@ -42,13 +44,19 @@ def test_Variable():
 
 @pytest.mark.ast
 def test_BlankNode():
-    node1 = BlankNode()
-    node2 = BlankNode()
+    factory1 = mock.sentinel.factory1
+    factory2 = mock.sentinel.factory2
+
+    node1 = BlankNode(1, factory1)
+    node2 = BlankNode(2, factory1)
+    node3 = BlankNode(1, factory2)
 
     assert node1 != node2
+    assert node1 != node3
 
     assert str(node1)
     assert repr(node1)
+    assert hash(node1)
 
 
 @pytest.mark.ast

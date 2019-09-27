@@ -185,7 +185,7 @@ class ForwardReasoner:
                     if members == inferred_from:
                         return inserted
 
-            node = BlankNode()
+            node = self._store.blank_node_factory()
             self._store.insert(node, TYPE, BAG, version)
             self._store.insert(triple, INFERRED_FROM, node, version)
             for i, i_f in enumerate(inferred_from):

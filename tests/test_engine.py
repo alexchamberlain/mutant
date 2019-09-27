@@ -1,10 +1,9 @@
-import tempfile
-
 import pytest
 
 from hexastore.ast import IRI, Variable, OrderCondition, Order
+from hexastore.blank_node_factory import BlankNodeFactory
 from hexastore.memory import VersionedInMemoryHexastore
-from hexastore.engine import execute, Stats
+from hexastore.engine import execute
 
 
 DAVE_SMITH = IRI("http://example.com/dave-smith")
@@ -25,7 +24,8 @@ WORKS_FOR = IRI("https://schema.org/worksFor")
 
 @pytest.fixture
 def store():
-    hexastore = VersionedInMemoryHexastore()
+    blank_node_factory = BlankNodeFactory()
+    hexastore = VersionedInMemoryHexastore(blank_node_factory)
     hexastore.insert(DAVE_SMITH, TYPE, PERSON, 0)
     hexastore.insert(DAVE_SMITH, NAME, "Dave Smith", 1)
 

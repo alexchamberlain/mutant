@@ -2,9 +2,22 @@ from collections import defaultdict
 from dataclasses import dataclass
 import itertools
 import functools
-from typing import Any, Tuple, Optional, Mapping, Iterable, Union, Sequence, ValuesView, AbstractSet, Iterator, List
+from typing import (
+    Any,
+    Tuple,
+    Optional,
+    Mapping,
+    Iterable,
+    Union,
+    Sequence,
+    ValuesView,
+    AbstractSet,
+    Iterator,
+    List,
+    Callable,
+)
 
-from .ast import Order, TripleStatus, TripleStatusItem
+from .ast import Order, TripleStatus, TripleStatusItem, BlankNode
 from .model import Key
 from .sorted import SortedList, SortedMapping, DefaultSortedMapping
 from .typing import Term, Triple, MutableIndex, MutableOrderedMapping
@@ -56,8 +69,9 @@ def _TrunkMapping(store: Union["VersionedInMemoryHexastore", "InMemoryHexastore"
 
 
 class VersionedInMemoryHexastore:
-    def __init__(self) -> None:
+    def __init__(self, blank_node_factory: Callable[[], BlankNode]) -> None:
         self.n_triples: int = 0
+        self.blank_node_factory = blank_node_factory
 
         self.spo: MutableIndex = _TrunkMapping(self, True)
         self.pos: MutableIndex = _TrunkMapping(self, True)
@@ -224,8 +238,9 @@ class VersionedInMemoryHexastore:
 
 
 class InMemoryHexastore:
-    def __init__(self) -> None:
+    def __init__(self, blank_node_factory: Callable[[], BlankNode]) -> None:
         self.n_triples: int = 0
+        self.blank_node_factory = blank_node_factory
 
         self.spo: MutableIndex = _TrunkMapping(self, True)
         self.pos: MutableIndex = _TrunkMapping(self, True)

@@ -3,10 +3,11 @@ from pprint import pprint
 import pytest
 
 from hexastore.ast import IRI, BlankNode
+from hexastore.blank_node_factory import BlankNodeFactory
 from hexastore.memory import VersionedInMemoryHexastore
 from hexastore.model import Key
 from hexastore.forward_reasoner import ForwardReasoner
-from hexastore.util import triple_map, plot
+from hexastore.util import triple_map
 
 A = IRI("http://example.com/A")
 B = IRI("http://example.com/B")
@@ -50,7 +51,8 @@ def parent_sibling_rule(store, s, p, o, insert):
 @pytest.mark.forward_reasoner
 @pytest.mark.skip
 def test_forward_reasoner_with_one_parent_delete():
-    store = VersionedInMemoryHexastore()
+    blank_node_factory = BlankNodeFactory()
+    store = VersionedInMemoryHexastore(blank_node_factory)
     reasoner = ForwardReasoner(store)
 
     reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
@@ -67,7 +69,8 @@ def test_forward_reasoner_with_one_parent_delete():
 
     pprint(list(store.triples()))
 
-    expected_store = VersionedInMemoryHexastore()
+    blank_node_factory = BlankNodeFactory()
+    expected_store = VersionedInMemoryHexastore(blank_node_factory)
     expected_store.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
     expected_store.insert(CHILDREN, INVERSE_OF, PARENT, 1)
     expected_store.insert(PARENT, INVERSE_OF, CHILDREN, 1)
@@ -76,7 +79,7 @@ def test_forward_reasoner_with_one_parent_delete():
     expected_store.insert(D, PARENT, A, 3)
     expected_store.insert(A, CHILDREN, D, 3)
 
-    node = BlankNode()
+    node = blank_node_factory()
     expected_store.insert(node, TYPE, BAG, 2)
     expected_store.insert((A, CHILDREN, D), INFERRED_FROM, node, 2)
     expected_store.insert(node, _li(1), (CHILDREN, INVERSE_OF, PARENT), 2)
@@ -88,7 +91,8 @@ def test_forward_reasoner_with_one_parent_delete():
 @pytest.mark.forward_reasoner
 @pytest.mark.skip
 def test_forward_reasoner_with_children_and_delete():
-    store = VersionedInMemoryHexastore()
+    blank_node_factory = BlankNodeFactory()
+    store = VersionedInMemoryHexastore(blank_node_factory)
     reasoner = ForwardReasoner(store)
 
     reasoner.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
@@ -105,7 +109,8 @@ def test_forward_reasoner_with_children_and_delete():
 
     reasoner.delete(D, PARENT, A, 6)
 
-    expected_store = VersionedInMemoryHexastore()
+    blank_node_factory = BlankNodeFactory()
+    expected_store = VersionedInMemoryHexastore(blank_node_factory)
     expected_store.insert(SPOUSE, TYPE, SYMMETRIC_PROPERTY, 1)
     expected_store.insert(CHILDREN, INVERSE_OF, PARENT, 1)
     expected_store.insert(PARENT, INVERSE_OF, CHILDREN, 1)
@@ -114,7 +119,7 @@ def test_forward_reasoner_with_children_and_delete():
     expected_store.insert(A, SPOUSE, B, 1)
     expected_store.insert(B, SPOUSE, A, 1)
 
-    node = BlankNode()
+    node = blank_node_factory()
     expected_store.insert(node, TYPE, BAG, 1)
     expected_store.insert((B, SPOUSE, A), INFERRED_FROM, node, 1)
     expected_store.insert(node, _li(1), (SPOUSE, TYPE, SYMMETRIC_PROPERTY), 1)
@@ -131,31 +136,31 @@ def test_forward_reasoner_with_children_and_delete():
     expected_store.insert(C, SIBLING, D, 5)
     expected_store.insert(D, SIBLING, C, 5)
 
-    node = BlankNode()
+    node = blank_node_factory()
     expected_store.insert(node, TYPE, BAG, 5)
     expected_store.insert((C, SIBLING, D), INFERRED_FROM, node, 5)
     expected_store.insert(node, _li(1), (D, PARENT, B), 5)
     expected_store.insert(node, _li(2), (C, PARENT, B), 5)
 
-    node = BlankNode()
+    node = blank_node_factory()
     expected_store.insert(node, TYPE, BAG, 5)
     expected_store.insert((D, SIBLING, C), INFERRED_FROM, node, 5)
     expected_store.insert(node, _li(1), (D, PARENT, B), 5)
     expected_store.insert(node, _li(2), (C, PARENT, B), 5)
 
-    node = BlankNode()
+    node = blank_node_factory()
     expected_store.insert(node, TYPE, BAG, 2)
     expected_store.insert((A, CHILDREN, C), INFERRED_FROM, node, 2)
     expected_store.insert(node, _li(1), (CHILDREN, INVERSE_OF, PARENT), 2)
     expected_store.insert(node, _li(2), (C, PARENT, A), 2)
 
-    node = BlankNode()
+    node = blank_node_factory()
     expected_store.insert(node, TYPE, BAG, 2)
     expected_store.insert((B, CHILDREN, C), INFERRED_FROM, node, 2)
     expected_store.insert(node, _li(1), (CHILDREN, INVERSE_OF, PARENT), 2)
     expected_store.insert(node, _li(2), (C, PARENT, B), 2)
 
-    node = BlankNode()
+    node = blank_node_factory()
     expected_store.insert(node, TYPE, BAG, 2)
     expected_store.insert((B, CHILDREN, D), INFERRED_FROM, node, 2)
     expected_store.insert(node, _li(1), (CHILDREN, INVERSE_OF, PARENT), 2)
@@ -265,7 +270,8 @@ def _get_many(hexastore, s, p):
 
 @pytest.mark.forward_reasoner
 def test_forward_reasoner_inferred_child_with_delete():
-    store = VersionedInMemoryHexastore()
+    blank_node_factory = BlankNodeFactory()
+    store = VersionedInMemoryHexastore(blank_node_factory)
     reasoner = ForwardReasoner(store)
 
     reasoner.insert(A, SPOUSE, B, 1)
