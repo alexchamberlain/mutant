@@ -57,7 +57,10 @@ class Key:
 @functools.total_ordering
 class Solution:
     def __init__(
-        self, d: Union[Map[Variable, Term], Dict[Variable, Term]], o: List[OrderCondition], triples: AbstractSet[Triple]
+        self,
+        d: Union["Map[Variable, Term]", Dict[Variable, Term]],
+        o: List[OrderCondition],
+        triples: AbstractSet[Triple],
     ):
         self._d = d if isinstance(d, Map) else Map(d)
         self._o = o
@@ -68,7 +71,7 @@ class Solution:
             # self._d.update(other._d)
             triples = self._triples | other._triples
 
-            other_d: Union[Map[Variable, Term], Dict[Variable, Term]] = other._d
+            other_d: Union["Map[Variable, Term]", Dict[Variable, Term]] = other._d
         else:
             other_d = other
             triples = self._triples
