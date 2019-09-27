@@ -1,16 +1,16 @@
-import sys
 import contextlib
 import logging
-from typing import Dict
+import sys
 import time
+from typing import Dict
 
 import click
 
 from hexastore import generic_rule, turtle, turtle_serialiser
 from hexastore.ast import IRI
-from hexastore.namespace import Namespace
-from hexastore.memory import VersionedInMemoryHexastore
 from hexastore.default_forward_reasoner import default_forward_reasoner
+from hexastore.memory import VersionedInMemoryHexastore
+from hexastore.namespace import Namespace
 
 logger = logging.getLogger(__name__)
 

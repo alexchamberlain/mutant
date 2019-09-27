@@ -1,8 +1,8 @@
+import decimal
 from collections import defaultdict
 from dataclasses import dataclass
-import decimal
 
-from .ast import IRI, BlankNode, TypedLiteral, LangTaggedString
+from .ast import IRI, BlankNode, LangTaggedString, TypedLiteral
 
 TYPE = IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
 

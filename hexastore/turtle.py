@@ -1,11 +1,11 @@
 import decimal
 import logging
 import pkgutil
-from typing import Union, Tuple, Optional, Dict
+from typing import Dict, Optional, Tuple, Union
 
 from lark import Lark, Transformer, v_args
 
-from .ast import IRI, Variable, BlankNode, LangTaggedString, TypedLiteral
+from .ast import IRI, BlankNode, LangTaggedString, TypedLiteral, Variable
 from .namespace import Namespace
 
 logger = logging.getLogger(__name__)

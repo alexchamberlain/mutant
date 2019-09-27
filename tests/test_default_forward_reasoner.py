@@ -2,8 +2,8 @@ import pytest
 
 from hexastore.ast import IRI, Variable
 from hexastore.blank_node_factory import BlankNodeFactory
-from hexastore.memory import VersionedInMemoryHexastore
 from hexastore.default_forward_reasoner import default_forward_reasoner
+from hexastore.memory import VersionedInMemoryHexastore
 
 A = IRI("http://example.com/A")
 B = IRI("http://example.com/B")

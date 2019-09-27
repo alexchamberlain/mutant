@@ -1,6 +1,6 @@
 import logging
 import pkgutil
-from typing import List, Union, Tuple, Callable
+from typing import Callable, List, Tuple, Union
 
 import attr
 from lark import Lark, Transformer, v_args

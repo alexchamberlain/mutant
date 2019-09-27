@@ -1,10 +1,10 @@
-import io
 import functools
-from typing import List, Dict, Union, Optional, Tuple, overload, TypeVar, AbstractSet
+import io
+from typing import AbstractSet, Dict, List, Optional, Tuple, TypeVar, Union, overload
 
 from immutables import Map
 
-from .ast import TYPE_ORDER_MAP, Order, Variable, OrderCondition
+from .ast import TYPE_ORDER_MAP, Order, OrderCondition, Variable
 from .typing import Term, Triple
 
 T = TypeVar("T")

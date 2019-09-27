@@ -1,12 +1,12 @@
-from dataclasses import dataclass
 import functools
-from typing import Any, Sequence, Union, Tuple, Iterator, List, TYPE_CHECKING, AbstractSet
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, AbstractSet, Any, Iterator, List, Sequence, Tuple, Union
 
 import attr
 
-from .ast import Variable, Order, IRI, OrderCondition
+from .ast import IRI, Order, OrderCondition, Variable
 from .model import Solution
-from .typing import Hexastore, Triple, Term
+from .typing import Hexastore, Term, Triple
 from .util import triple_map
 
 IS_NOT = IRI("http://example.org/isNot")

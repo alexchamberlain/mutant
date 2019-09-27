@@ -1,9 +1,9 @@
 from unittest import mock
 
-from hexastore.ast import IRI, Variable, BlankNode, TripleStatus, TripleStatusItem
-from hexastore.model import Solution, Key
-
 import pytest
+
+from hexastore.ast import IRI, BlankNode, TripleStatus, TripleStatusItem, Variable
+from hexastore.model import Key, Solution
 
 DAVE_SMITH = IRI("http://example.com/dave-smith")
 ERIC_MILLER = IRI("http://example.com/eric-miller")

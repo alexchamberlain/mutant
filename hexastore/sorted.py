@@ -1,3 +1,4 @@
+import bisect
 import functools
 import typing
 from typing import (
@@ -9,18 +10,16 @@ from typing import (
     Iterator,
     List,
     Optional,
-    overload,
     Sequence,
     Tuple,
     Union,
     ValuesView,
     cast,
+    overload,
 )
-import bisect
 
 from .ast import Order
 from .typing import Comparable, MutableOrderedMapping
-
 
 T = typing.TypeVar("T")
 U = typing.TypeVar("U", bound=Comparable)

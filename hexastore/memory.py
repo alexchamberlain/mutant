@@ -1,26 +1,26 @@
+import functools
+import itertools
 from collections import defaultdict
 from dataclasses import dataclass
-import itertools
-import functools
 from typing import (
-    Any,
-    Tuple,
-    Optional,
-    Mapping,
-    Iterable,
-    Union,
-    Sequence,
-    ValuesView,
     AbstractSet,
+    Any,
+    Callable,
+    Iterable,
     Iterator,
     List,
-    Callable,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    ValuesView,
 )
 
-from .ast import Order, TripleStatus, TripleStatusItem, BlankNode
+from .ast import BlankNode, Order, TripleStatus, TripleStatusItem
 from .model import Key
-from .sorted import SortedList, SortedMapping, DefaultSortedMapping
-from .typing import Term, Triple, MutableIndex, MutableOrderedMapping
+from .sorted import DefaultSortedMapping, SortedList, SortedMapping
+from .typing import MutableIndex, MutableOrderedMapping, Term, Triple
 from .util import triple_map
 
 

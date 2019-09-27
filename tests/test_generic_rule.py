@@ -1,14 +1,14 @@
 import pkgutil
 
-from lark import Lark
 import pytest
+from lark import Lark
 
 from hexastore import generic_rule
+from hexastore.ast import IRI, Variable
 from hexastore.blank_node_factory import BlankNodeFactory
-from hexastore.ast import Variable, IRI
+from hexastore.forward_reasoner import ForwardReasoner
 from hexastore.memory import VersionedInMemoryHexastore
 from hexastore.namespace import Namespace
-from hexastore.forward_reasoner import ForwardReasoner
 
 A = IRI("http://example.com/A")
 B = IRI("http://example.com/B")

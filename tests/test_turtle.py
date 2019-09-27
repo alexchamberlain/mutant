@@ -1,16 +1,15 @@
-from decimal import Decimal
 import io
-import textwrap
 import pkgutil
+import textwrap
+from decimal import Decimal
 
 import pytest
-
 from lark import Lark, Token
 
 from hexastore.ast import IRI, LangTaggedString, TypedLiteral
 from hexastore.blank_node_factory import BlankNodeFactory
-from hexastore.model import Key
 from hexastore.memory import VersionedInMemoryHexastore
+from hexastore.model import Key
 from hexastore.turtle import parse
 from hexastore.turtle_serialiser import serialise
 

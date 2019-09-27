@@ -1,10 +1,10 @@
 import random
 
+import hypothesis.strategies as st
 import pytest
 from hypothesis import given
-import hypothesis.strategies as st
 
-from hexastore.sorted import SortedList, SortedMapping, Order
+from hexastore.sorted import Order, SortedList, SortedMapping
 
 
 @pytest.mark.sorted

@@ -1,9 +1,10 @@
-from typing import Union, Any, Tuple, Mapping, ItemsView, MutableMapping
 import typing
-from typing_extensions import Protocol
 from abc import abstractmethod
+from typing import Any, ItemsView, Mapping, MutableMapping, Tuple, Union
 
-from .ast import IRI, TripleStatus, Order
+from typing_extensions import Protocol
+
+from .ast import IRI, Order, TripleStatus
 
 _C = typing.TypeVar("_C", bound="Comparable")
 

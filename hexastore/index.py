@@ -1,6 +1,5 @@
 from .ast import Variable
 
-
 SUBJECT = 1
 PREDICATE = 2
 OBJECT = 4

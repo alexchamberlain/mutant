@@ -1,5 +1,5 @@
 import itertools
-from typing import TypeVar, Callable, Tuple
+from typing import Callable, Tuple, TypeVar
 
 from .model import Key
 

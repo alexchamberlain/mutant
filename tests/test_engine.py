@@ -1,10 +1,9 @@
 import pytest
 
-from hexastore.ast import IRI, Variable, OrderCondition, Order
+from hexastore.ast import IRI, Order, OrderCondition, Variable
 from hexastore.blank_node_factory import BlankNodeFactory
-from hexastore.memory import VersionedInMemoryHexastore
 from hexastore.engine import execute
-
+from hexastore.memory import VersionedInMemoryHexastore
 
 DAVE_SMITH = IRI("http://example.com/dave-smith")
 ERIC_MILLER = IRI("http://example.com/eric-miller")

@@ -1,11 +1,11 @@
-import sys
 import logging
+import sys
 import time
+
+from rdflib.graph import Graph
 
 from hexastore import turtle
 from hexastore.memory import InMemoryHexastore
-
-from rdflib.graph import Graph
 
 logger = logging.getLogger(__name__)
 

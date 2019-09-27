@@ -4,9 +4,9 @@ import pytest
 
 from hexastore.ast import IRI, BlankNode
 from hexastore.blank_node_factory import BlankNodeFactory
+from hexastore.forward_reasoner import ForwardReasoner
 from hexastore.memory import VersionedInMemoryHexastore
 from hexastore.model import Key
-from hexastore.forward_reasoner import ForwardReasoner
 from hexastore.util import triple_map
 
 A = IRI("http://example.com/A")

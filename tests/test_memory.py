@@ -2,8 +2,7 @@ import pytest
 
 from hexastore.ast import IRI, TripleStatus, TripleStatusItem
 from hexastore.blank_node_factory import BlankNodeFactory
-from hexastore.memory import VersionedInMemoryHexastore, TrunkPayload, InMemoryHexastore
-
+from hexastore.memory import InMemoryHexastore, TrunkPayload, VersionedInMemoryHexastore
 
 DAVE_SMITH = IRI("http://example.com/dave-smith")
 ERIC_MILLER = IRI("http://example.com/eric-miller")

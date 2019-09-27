@@ -1,6 +1,7 @@
 """Bisection algorithms."""
 
-from typing import Sequence, TypeVar, Optional, Callable, cast
+from typing import Callable, Optional, Sequence, TypeVar, cast
+
 from .typing import Comparable
 
 T = TypeVar("T")
