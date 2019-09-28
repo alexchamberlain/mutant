@@ -1,6 +1,6 @@
 import pytest
 
-from hexastore.ast import IRI, Order, OrderCondition, Variable
+from hexastore.ast import BGP, IRI, Distinct, LeftJoin, Order, OrderCondition, Project, Reduced, Variable
 from hexastore.blank_node_factory import BlankNodeFactory
 from hexastore.engine import execute
 from hexastore.memory import VersionedInMemoryHexastore
@@ -84,6 +84,40 @@ def test_engine_2_patterns(store):
 
 
 @pytest.mark.engine
+def test_engine_2_patterns_with_projection(store):
+    solutions, stats = execute(
+        store,
+        Project(
+            [Variable("name")], BGP([(Variable("person"), TYPE, PERSON), (Variable("person"), NAME, Variable("name"))])
+        ),
+        [],
+    )
+
+    print(stats)
+
+    assert solutions == [{Variable("name"): "Dave Smith"}, {Variable("name"): "Eric Miller"}]
+
+
+@pytest.mark.engine
+def test_engine_2_patterns_1_option(store):
+    solutions, stats = execute(
+        store,
+        LeftJoin(
+            BGP([(Variable("person"), TYPE, PERSON), (Variable("person"), NAME, Variable("name"))]),
+            BGP([(Variable("person"), WORKS_FOR, Variable("works_for"))]),
+        ),
+        [],
+    )
+
+    print(stats)
+
+    assert solutions == [
+        {Variable("person"): DAVE_SMITH, Variable("name"): "Dave Smith"},
+        {Variable("person"): ERIC_MILLER, Variable("name"): "Eric Miller", Variable("works_for"): W3},
+    ]
+
+
+@pytest.mark.engine
 def test_engine_2_patterns_with_order(store):
     solutions, stats = execute(
         store,
@@ -97,3 +131,25 @@ def test_engine_2_patterns_with_order(store):
         {Variable("person"): ERIC_MILLER, Variable("name"): "Eric Miller"},
         {Variable("person"): DAVE_SMITH, Variable("name"): "Dave Smith"},
     ]
+
+
+@pytest.mark.engine
+def test_engine_distinct(store):
+    solutions, stats = execute(
+        store, Distinct(Project([Variable("type")], BGP([(Variable("person"), TYPE, Variable("type"))]))), []
+    )
+
+    print(stats)
+
+    assert solutions == [{Variable("type"): PERSON}, {Variable("type"): ORGANIZATION}]
+
+
+@pytest.mark.engine
+def test_engine_reduced(store):
+    solutions, stats = execute(
+        store, Reduced(Project([Variable("type")], BGP([(Variable("person"), TYPE, Variable("type"))]))), []
+    )
+
+    print(stats)
+
+    assert solutions == [{Variable("type"): PERSON}, {Variable("type"): ORGANIZATION}]

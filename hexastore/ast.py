@@ -1,7 +1,8 @@
+import datetime
 import decimal
 import enum
 import functools
-from typing import List, Optional
+from typing import List, Optional, Tuple, Union
 
 import attr
 
@@ -40,7 +41,7 @@ class BlankNode:
 
         return NotImplemented
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"BlankNode({str(self)})"
 
 
@@ -142,6 +143,41 @@ class Variable:
         return self.value == other.value
 
 
+TermPattern = Union[IRI, str, Variable]
+TermPatternPrime = Union[IRI, str, "VariableWithOrderInformation"]
+TriplePattern = Tuple[TermPattern, TermPattern, TermPattern]
+TriplePatternPrime = Tuple[TermPatternPrime, TermPatternPrime, TermPatternPrime]
+
+
+@attr.s(frozen=True)
+class BGP:
+    patterns: List[TriplePattern] = attr.ib()
+    limit: Optional[int] = attr.ib(default=None)
+
+
+@attr.s(frozen=True)
+class LeftJoin:
+    lhs: BGP = attr.ib()
+    rhs: BGP = attr.ib()
+    # filter
+
+
+@attr.s(frozen=True)
+class Project:
+    variables: List[Variable] = attr.ib()
+    pattern: Union[BGP, LeftJoin] = attr.ib()
+
+
+@attr.s(frozen=True)
+class Distinct:
+    pattern: Union[BGP, LeftJoin, Project] = attr.ib()
+
+
+@attr.s(frozen=True)
+class Reduced:
+    pattern: Union[BGP, LeftJoin, Project] = attr.ib()
+
+
 class Order(enum.IntEnum):
     ASCENDING = 0
     DESCENDING = 1
@@ -196,6 +232,7 @@ TYPE_ORDER = [
     int,
     decimal.Decimal,
     float,
+    datetime.datetime,
     TypedLiteral,
     Variable,
 ]

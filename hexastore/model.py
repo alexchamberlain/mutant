@@ -119,7 +119,7 @@ class Solution:
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Solution):
-            return self._d == other._d and self._triples == other._triples
+            return self._d == other._d
 
         if isinstance(other, dict):
             return len(self._d) == len(other) and all(v == other[k] for k, v in self._d.items())

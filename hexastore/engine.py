@@ -1,12 +1,26 @@
 import functools
+import itertools
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, AbstractSet, Any, Iterator, List, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, AbstractSet, Any, Iterator, List, Optional, Sequence, Tuple, Union
 
 import attr
 
-from .ast import IRI, Order, OrderCondition, Variable
-from .model import Solution
+from .ast import (
+    BGP,
+    IRI,
+    Distinct,
+    LeftJoin,
+    Order,
+    OrderCondition,
+    Project,
+    Reduced,
+    TermPattern,
+    TermPatternPrime,
+    TriplePattern,
+    Variable,
+)
+from .model import Key, Solution
 from .typing import Hexastore, Term, Triple
 from .util import triple_map
 
@@ -15,11 +29,6 @@ IS_NOT = IRI("http://example.org/isNot")
 SUBJECT = 1
 PREDICATE = 2
 OBJECT = 4
-
-TermPattern = Union[IRI, str, Variable]
-TermPatternPrime = Union[IRI, str, "VariableWithOrderInformation"]
-TriplePattern = Tuple[TermPattern, TermPattern, TermPattern]
-TriplePatternPrime = Tuple[TermPatternPrime, TermPatternPrime, TermPatternPrime]
 
 logger = logging.getLogger(__name__)
 
@@ -50,12 +59,16 @@ class VariableWithOrderInformation:
 
 
 def execute(
-    store: Hexastore, patterns: Sequence[TriplePattern], order_by: List[OrderCondition], bindings: Solution = None
+    store: Hexastore,
+    patterns: Union[Sequence[TriplePattern], BGP, LeftJoin, Distinct],
+    order_by: List[OrderCondition],
+    bindings: Solution = None,
 ) -> Sequence[Solution]:
     if bindings is None:
         bindings = Solution({}, order_by, set())
     engine_ = _Engine(store, order_by)
-    return engine_(patterns, bindings)
+
+    return engine_(patterns, bindings), engine_.stats
 
 
 class _Engine:
@@ -74,19 +87,57 @@ class _Engine:
 
         return term
 
-    def __call__(self, patterns: Sequence[TriplePattern], bindings: Solution) -> Sequence[Solution]:
+    def __call__(self, patterns, bindings):
+        if isinstance(patterns, list):
+            patterns = BGP(patterns)
+
+        if isinstance(patterns, BGP):
+            return self.apply_bgp(patterns.patterns, patterns.limit, bindings)
+        elif isinstance(patterns, Limit):
+            lhs_solutions = self(patterns.patterns, bindings)
+            return itertools.islice(lhs_solutions, patterns.limit)
+        elif isinstance(patterns, LeftJoin):
+            lhs_solutions = self(patterns.lhs, bindings)
+
+            solutions = []
+            for bindings in lhs_solutions:
+                rhs_solutions = self(patterns.rhs.patterns, bindings)
+                if rhs_solutions:
+                    solutions.extend(rhs_solutions)
+                else:
+                    solutions.append(bindings)
+            return sorted(solutions)
+        elif isinstance(patterns, Project):
+            rhs_solutions = self(patterns.pattern, bindings)
+            return sorted(
+                Solution({v: s.get(v) for v in patterns.variables}, self.order_by, s.triples) for s in rhs_solutions
+            )
+        elif isinstance(patterns, Distinct) or isinstance(patterns, Reduced):
+            solutions = self(patterns.pattern, bindings)
+            return [s for s, _ in itertools.groupby(solutions)]
+        else:
+            print(f"type {type(patterns)}")
+            assert False
+
+    def apply_bgp(
+        self, patterns: Sequence[TriplePattern], limit: Optional[int], bindings: Solution
+    ) -> Sequence[Solution]:
         if not patterns:
             return [Solution({}, self.order_by, set())]
 
         patterns = sorted(patterns, key=_count_variables)
 
-        solutions = list(map(_Merge(bindings), self._match(patterns[0])))
+        tp = (_s(patterns[0][0], bindings), _s(patterns[0][1], bindings), _s(patterns[0][2], bindings))
+        solutions = map(_Merge(bindings), self._match(tp))
 
         for triple_pattern in patterns[1:]:
-            solutions = list(self._process_pattern(triple_pattern, solutions))
+            solutions = self._process_pattern(triple_pattern, solutions)
+
+        if limit is not None:
+            solutions = itertools.islice(solutions, limit)
 
         # TODO: Can we reorg the algorithm above so that solutions is already sorted?
-        return sorted(solutions), self.stats
+        return sorted(solutions)
 
     def _process_pattern(self, triple_pattern: TriplePattern, solutions: Sequence[Solution]) -> Iterator[Solution]:
         for s in solutions:
@@ -97,7 +148,12 @@ class _Engine:
         logger.debug(f"triple_pattern_ {triple_pattern_}")
 
         triple_pattern, index_key = tuple(
-            zip(*sorted(zip(triple_map(self._preprocess_term, triple_pattern_), (SUBJECT, PREDICATE, OBJECT))))
+            zip(
+                *sorted(
+                    zip(triple_map(self._preprocess_term, triple_pattern_), (SUBJECT, PREDICATE, OBJECT)),
+                    key=lambda t: (t[0] if isinstance(t[0], VariableWithOrderInformation) else Key(t[0]), t[1]),
+                )
+            )
         )
 
         if TYPE_CHECKING:
@@ -149,7 +205,7 @@ class _Engine:
             except KeyError:
                 return
         else:
-            if triple_pattern in index:
+            if triple_pattern[2] in index[triple_pattern[0]][triple_pattern[1]]:
                 self.stats.increment_triples()
                 yield Solution({}, self.order_by, {transform(triple_pattern)})
 
