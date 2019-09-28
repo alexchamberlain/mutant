@@ -7,7 +7,7 @@ from . import generic_rule
 from .forward_reasoner import ForwardReasoner
 
 
-def default_forward_reasoner(store):
+def make_default_forward_reasoner(store):
     reasoner = ForwardReasoner(store)
 
     rdfs = pkgutil.get_data("hexastore", "rules/rdfs.mtt").decode()

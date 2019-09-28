@@ -26,6 +26,8 @@ def test_SortedList(xs):
 @pytest.mark.sorted
 def test_SortedList_equal():
     assert SortedList([1, 2, 3, 4, 5]) != 42
+    assert SortedList([1, 2, 3, 4, 5]) == [1, 2, 3, 4, 5]
+    assert [1, 2, 3, 4, 5] == SortedList([1, 2, 3, 4, 5])
 
 
 @pytest.mark.sorted

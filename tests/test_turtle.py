@@ -8,10 +8,16 @@ from lark import Lark, Token
 
 from hexastore.ast import IRI, LangTaggedString, TypedLiteral
 from hexastore.blank_node_factory import BlankNodeFactory
-from hexastore.memory import VersionedInMemoryHexastore
+from hexastore.memory import InMemoryHexastore
 from hexastore.model import Key
 from hexastore.turtle import parse
 from hexastore.turtle_serialiser import serialise
+
+
+@pytest.fixture
+def store():
+    blank_node_factory = BlankNodeFactory()
+    return InMemoryHexastore(blank_node_factory)
 
 
 @pytest.mark.turtle
@@ -27,15 +33,12 @@ def test_turtle_escaped_string():
 
 
 @pytest.mark.turtle
-def test_typed_literal():
+def test_typed_literal(store):
     document = """
         <http://bnb.data.bl.uk/id/person/%C3%96zbayKaan1964-/birth> <http://purl.org/vocab/bio/0.1/date> "1964"^^<http://www.w3.org/2001/XMLSchema#gYear> .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-
-    parse(document, lambda s, p, o: store.insert(s, p, o, 1))
+    parse(document, store.insert)
 
     assert list(store.triples()) == [
         (
@@ -47,17 +50,14 @@ def test_typed_literal():
 
 
 @pytest.mark.turtle
-def test_turtle_example_2():
+def test_turtle_example_2(store):
     document = """
         <http://example.org/#spiderman>
             <http://www.perceive.net/schemas/relationship/enemyOf>
             <http://example.org/#green-goblin> .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-
-    parse(document, lambda s, p, o: store.insert(s, p, o, 1))
+    parse(document, store.insert)
 
     assert list(store.triples()) == [
         (
@@ -69,17 +69,14 @@ def test_turtle_example_2():
 
 
 @pytest.mark.turtle
-def test_turtle_example_3():
+def test_turtle_example_3(store):
     document = """
         <http://example.org/#spiderman>
             <http://www.perceive.net/schemas/relationship/enemyOf> <http://example.org/#green-goblin> ;
             <http://xmlns.com/foaf/0.1/name> "Spiderman" .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-
-    parse(document, lambda s, p, o: store.insert(s, p, o, 1))
+    parse(document, store.insert)
 
     assert list(store.triples()) == [
         (
@@ -92,15 +89,12 @@ def test_turtle_example_3():
 
 
 @pytest.mark.turtle
-def test_turtle_example_4():
+def test_turtle_example_4(store):
     document = """
         <http://example.org/#spiderman> <http://xmlns.com/foaf/0.1/name> "Spiderman", "Человек-паук"@ru .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-
-    parse(document, lambda s, p, o: store.insert(s, p, o, 1))
+    parse(document, store.insert)
 
     assert list(store.triples()) == [
         (IRI("http://example.org/#spiderman"), IRI("http://xmlns.com/foaf/0.1/name"), "Spiderman"),
@@ -113,17 +107,14 @@ def test_turtle_example_4():
 
 
 @pytest.mark.turtle
-def test_turtle_example_7():
+def test_turtle_example_7(store):
     document = """
         @prefix somePrefix: <http://www.perceive.net/schemas/relationship/> .
 
         <http://example.org/#green-goblin> somePrefix:enemyOf <http://example.org/#spiderman> .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-
-    parse(document, lambda s, p, o: store.insert(s, p, o, 1))
+    parse(document, store.insert)
 
     assert list(store.triples()) == [
         (
@@ -135,17 +126,14 @@ def test_turtle_example_7():
 
 
 @pytest.mark.turtle
-def test_turtle_example_8():
+def test_turtle_example_8(store):
     document = """
         PREFIX somePrefix: <http://www.perceive.net/schemas/relationship/>
 
         <http://example.org/#green-goblin> somePrefix:enemyOf <http://example.org/#spiderman> .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-
-    parse(document, lambda s, p, o: store.insert(s, p, o, 1))
+    parse(document, store.insert)
 
     assert list(store.triples()) == [
         (
@@ -157,7 +145,7 @@ def test_turtle_example_8():
 
 
 @pytest.mark.turtle
-def test_turtle_example_9():
+def test_turtle_example_9(store):
     document = """
         <http://one.example/subject1> <http://one.example/predicate1> <http://one.example/object1> .
 
@@ -184,10 +172,7 @@ def test_turtle_example_9():
         <http://伝言.example/?user=أكرم&amp;channel=R%26D> a :subject8 .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-
-    parse(document, lambda s, p, o: store.insert(s, p, o, 1))
+    parse(document, store.insert)
 
     assert list(store.triples()) == sorted(
         [
@@ -232,7 +217,7 @@ def test_turtle_example_9():
 
 
 @pytest.mark.turtle
-def test_turtle_example_10():
+def test_turtle_example_10(store):
     document = """
         @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 
@@ -241,10 +226,7 @@ def test_turtle_example_10():
         <http://example.org/#spiderman> foaf:name "Spiderman" .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-
-    parse(document, lambda s, p, o: store.insert(s, p, o, 1))
+    parse(document, store.insert)
 
     assert list(store.triples()) == [
         (IRI("http://example.org/#green-goblin"), IRI("http://xmlns.com/foaf/0.1/name"), "Green Goblin"),
@@ -253,7 +235,7 @@ def test_turtle_example_10():
 
 
 @pytest.mark.turtle
-def test_turtle_example_11():
+def test_turtle_example_11(store):
     document = """
         @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
         @prefix show: <http://example.org/vocab/show/> .
@@ -270,10 +252,7 @@ literal with many quotes (\"\"\"\"\")
 and up to two sequential apostrophes ('').''' .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-
-    parse(document, lambda s, p, o: store.insert(s, p, o, 1))
+    parse(document, store.insert)
 
     assert (
         IRI("http://example.org/vocab/show/218"),
@@ -283,7 +262,7 @@ and up to two sequential apostrophes ('').''' .
 
 
 @pytest.mark.turtle
-def test_turtle_example_12():
+def test_turtle_example_12(store):
     document = """
         @prefix : <http://example.org/elements#> .
 
@@ -293,10 +272,7 @@ def test_turtle_example_12():
             :specificGravity 1.663E-4 .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-
-    parse(document, lambda s, p, o: store.insert(s, p, o, 1))
+    parse(document, store.insert)
 
     assert list(store.triples()) == [
         (
@@ -310,7 +286,7 @@ def test_turtle_example_12():
 
 
 @pytest.mark.turtle
-def test_turtleX_example_3():
+def test_turtleX_example_3(store):
     document = """
         @prefix : <http://example.org/> .
         @prefix foaf: <http://xmlns.com/foaf/0.1/> .
@@ -320,11 +296,7 @@ def test_turtleX_example_3():
         <<:bob foaf:age 23>> dct:creator <http://example.com/crawlers#c1> ;
             dct:source <http://example.net/homepage-listing.html> .
     """
-
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-
-    parse(document, lambda s, p, o: store.insert(s, p, o, 1))
+    parse(document, store.insert)
 
     assert list(store.triples()) == [
         (
@@ -343,7 +315,7 @@ def test_turtleX_example_3():
 
 
 @pytest.mark.turtle_serialiser
-def test_turtleX_example_3_serialise():
+def test_turtleX_example_3_serialise(store):
     document = """
         @prefix : <http://example.org/> .
         @prefix foaf: <http://xmlns.com/foaf/0.1/> .
@@ -354,10 +326,7 @@ def test_turtleX_example_3_serialise():
             dct:source <http://example.net/homepage-listing.html> .
     """
 
-    blank_node_factory = BlankNodeFactory()
-    store = VersionedInMemoryHexastore(blank_node_factory)
-
-    parse(document, lambda s, p, o: store.insert(s, p, o, 1))
+    parse(document, store.insert)
 
     out = io.StringIO()
     serialise(

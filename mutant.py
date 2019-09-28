@@ -9,7 +9,7 @@ import click
 from hexastore import generic_rule, turtle, turtle_serialiser
 from hexastore.ast import IRI
 from hexastore.default_forward_reasoner import default_forward_reasoner
-from hexastore.memory import VersionedInMemoryHexastore
+from hexastore.memory import InMemoryHexastore
 from hexastore.namespace import Namespace
 
 logger = logging.getLogger(__name__)
@@ -75,7 +75,7 @@ def cat(namespace, filenames, output):
 @click.argument("filenames", nargs=-1)
 @click.argument("output", nargs=1)
 def reason(namespace, filenames, output):
-    store = VersionedInMemoryHexastore()
+    store = InMemoryHexastore()
     reasoner = default_forward_reasoner(store)
 
     namespaces: Dict[str, Namespace] = {n: Namespace(n, IRI(i)) for n, i in namespace}
@@ -89,7 +89,7 @@ def reason(namespace, filenames, output):
                         new_namespaces = turtle.parse(fo.read(), lambda s, p, o: triples.append((s, p, o)))
 
                     _update_namespaces(namespaces, new_namespaces)
-                    reasoner.bulk_insert(triples, 1)
+                    reasoner.bulk_insert(triples)
                 elif filename.endswith("mtt"):
                     with open(filename) as fo:
                         generic_rule.parse_and_register(fo.read(), reasoner)

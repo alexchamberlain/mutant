@@ -124,6 +124,9 @@ class SortedList(Sequence[T], AbstractSet[T]):
         i = bisect.bisect_left(self._keys, key, lo=0, hi=end)
         return i != end and self[i] == x
 
+    def to_list(self) -> list:
+        return self._l
+
 
 class _SortedMappingValues(ValuesView[V]):
     def __init__(self, l: List[V]):

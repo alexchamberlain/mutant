@@ -1,6 +1,6 @@
 import typing
 from abc import abstractmethod
-from typing import Any, ItemsView, Mapping, MutableMapping, Tuple, Union
+from typing import Any, ItemsView, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
 
 from typing_extensions import Protocol
 
@@ -44,7 +44,32 @@ class MutableOrderedMapping(OrderedMapping[T, V], MutableMapping[T, V]):
 
 
 Term = Union[IRI, str]
-Hexastore = Any
+# Hexastore = Any
 Triple = Tuple[Term, Term, Term]
 Index = OrderedMapping[Term, OrderedMapping[Term, OrderedMapping[Term, TripleStatus]]]
 MutableIndex = MutableOrderedMapping[Term, MutableOrderedMapping[Term, MutableOrderedMapping[Term, TripleStatus]]]
+
+
+class Hexastore(Protocol):
+    def __len__(self) -> int:
+        ...
+
+    def index(self, triple: Triple) -> Optional[int]:
+        ...
+
+    def bulk_insert(self, triples: List[Triple]) -> None:
+        ...
+
+    def insert(self, s: Term, p: Term, o: Term) -> bool:
+        ...
+
+    def delete(self, s: Term, p: Term, o: Term) -> None:
+        ...
+
+    def terms(self) -> List[Term]:
+        ...
+
+    def triples(
+        self, index: Optional[MutableIndex] = None, order: Optional[Tuple[Order, Order, Order]] = None
+    ) -> Iterable[Triple]:
+        ...

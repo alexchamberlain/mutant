@@ -1,4 +1,5 @@
 import functools
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, AbstractSet, Any, Iterator, List, Sequence, Tuple, Union
 
@@ -19,6 +20,8 @@ TermPattern = Union[IRI, str, Variable]
 TermPatternPrime = Union[IRI, str, "VariableWithOrderInformation"]
 TriplePattern = Tuple[TermPattern, TermPattern, TermPattern]
 TriplePatternPrime = Tuple[TermPatternPrime, TermPatternPrime, TermPatternPrime]
+
+logger = logging.getLogger(__name__)
 
 
 @functools.total_ordering
@@ -91,6 +94,8 @@ class _Engine:
             yield from map(_Merge(s), self._match(tp))
 
     def _match(self, triple_pattern_: TriplePattern) -> Iterator[Solution]:
+        logger.debug(f"triple_pattern_ {triple_pattern_}")
+
         triple_pattern, index_key = tuple(
             zip(*sorted(zip(triple_map(self._preprocess_term, triple_pattern_), (SUBJECT, PREDICATE, OBJECT))))
         )
@@ -120,35 +125,25 @@ class _Engine:
             )
             for s, po in index.items(order=order[0]):
                 for p, oid in po.items(order=order[1]):
-                    for o, status in oid.items(order[2]):
-                        self.stats.increment_triples()
-                        if status.inserted:
-                            yield dzip(variables_3, (s, p, o), self.order_by, {transform((s, p, o))})
+                    for o in oid.iter(order[2], self.stats.increment_triples):
+                        yield dzip(variables_3, (s, p, o), self.order_by, {transform((s, p, o))})
         elif isinstance(triple_pattern[1], VariableWithOrderInformation):
             s = triple_pattern[0]
             po = index[s]
             variables_2 = (triple_pattern[1].to_variable(), triple_pattern[2].to_variable())
             for p, o_list in po.items(order=triple_pattern[1].order_by_direction):
-                for o, status in o_list.items(order=triple_pattern[2].order_by_direction):
-                    self.stats.increment_triples()
-                    if status.inserted:
-                        yield dzip(variables_2, (p, o), self.order_by, {transform((s, p, o))})
+                for o in o_list.iter(triple_pattern[2].order_by_direction, self.stats.increment_triples):
+                    yield dzip(variables_2, (p, o), self.order_by, {transform((s, p, o))})
         elif isinstance(triple_pattern[2], VariableWithOrderInformation):
             s = triple_pattern[0]
             p = triple_pattern[1]
             po = index[s]
             o_list = po[p]
             variables_1 = (triple_pattern[2].to_variable(),)
-            for o, status in o_list.items(order=triple_pattern[2].order_by_direction):
-                self.stats.increment_triples()
-                if status.inserted:
-                    yield dzip(variables_1, (o,), self.order_by, {transform((s, p, o))})
+            for o in o_list.iter(triple_pattern[2].order_by_direction, self.stats.increment_triples):
+                yield dzip(variables_1, (o,), self.order_by, {transform((s, p, o))})
         else:
-            s, p, o = triple_pattern
-            po = index[s]
-            o_list = po[p]
-            self.stats.increment_triples()
-            if o in o_list and o_list[o].inserted:
+            if triple_pattern in self.store:
                 yield Solution({}, self.order_by, {transform(triple_pattern)})
 
 

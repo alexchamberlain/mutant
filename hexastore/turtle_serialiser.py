@@ -52,7 +52,7 @@ class _Serialiser:
     def _serialise_predicate_object_list(self, p, os, level=1):
         assert level < 10
 
-        objs = [self._serialise_object(o, level) for o, status in os.items() if status.inserted]
+        objs = [self._serialise_object(o, level) for o in os.iter()]
         o = ", ".join(objs)
 
         return f"{self._terms[p]} {o}" if o else ""
@@ -96,9 +96,6 @@ class _Serialiser:
         elif isinstance(t, LangTaggedString):
             return f'"{t.value}"@{t.language}'
         else:
-            import pdb
-
-            pdb.set_trace()
             raise TypeError(f"Unknown type {type(t)} ({t})")
 
 

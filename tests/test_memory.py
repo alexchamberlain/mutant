@@ -1,6 +1,6 @@
 import pytest
 
-from hexastore.ast import IRI, TripleStatus, TripleStatusItem
+from hexastore.ast import IRI, BlankNode, TripleStatus, TripleStatusItem
 from hexastore.blank_node_factory import BlankNodeFactory
 from hexastore.memory import InMemoryHexastore, TrunkPayload, VersionedInMemoryHexastore
 
@@ -454,6 +454,7 @@ def test_store_with_inference(store_with_inference):
 def store_family_tree():
     blank_node_factory = BlankNodeFactory()
     hexastore = VersionedInMemoryHexastore(blank_node_factory)
+
     hexastore.insert(A, SPOUSE, B, 1)
     hexastore.insert(B, SPOUSE, A, 1)
     hexastore.insert((B, SPOUSE, A), INFERRED_FROM, (A, SPOUSE, B), 1)
@@ -507,6 +508,7 @@ def store_family_tree():
 def store_family_tree_bulk():
     blank_node_factory = BlankNodeFactory()
     hexastore = VersionedInMemoryHexastore(blank_node_factory)
+
     hexastore.bulk_insert([(A, SPOUSE, B), (B, SPOUSE, A), ((B, SPOUSE, A), INFERRED_FROM, (A, SPOUSE, B))], 1)
     hexastore.bulk_insert([(C, PARENT, A), (A, CHILDREN, C), ((A, CHILDREN, C), INFERRED_FROM, (C, PARENT, A))], 2)
     hexastore.bulk_insert([(C, PARENT, B), (B, CHILDREN, C), ((B, CHILDREN, C), INFERRED_FROM, (C, PARENT, B))], 3)
