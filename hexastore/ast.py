@@ -2,7 +2,7 @@ import datetime
 import decimal
 import enum
 import functools
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional
 
 import attr
 
@@ -141,41 +141,6 @@ class Variable:
             return False
 
         return self.value == other.value
-
-
-TermPattern = Union[IRI, str, Variable]
-TermPatternPrime = Union[IRI, str, "VariableWithOrderInformation"]
-TriplePattern = Tuple[TermPattern, TermPattern, TermPattern]
-TriplePatternPrime = Tuple[TermPatternPrime, TermPatternPrime, TermPatternPrime]
-
-
-@attr.s(frozen=True)
-class BGP:
-    patterns: List[TriplePattern] = attr.ib()
-    limit: Optional[int] = attr.ib(default=None)
-
-
-@attr.s(frozen=True)
-class LeftJoin:
-    lhs: BGP = attr.ib()
-    rhs: BGP = attr.ib()
-    # filter
-
-
-@attr.s(frozen=True)
-class Project:
-    variables: List[Variable] = attr.ib()
-    pattern: Union[BGP, LeftJoin] = attr.ib()
-
-
-@attr.s(frozen=True)
-class Distinct:
-    pattern: Union[BGP, LeftJoin, Project] = attr.ib()
-
-
-@attr.s(frozen=True)
-class Reduced:
-    pattern: Union[BGP, LeftJoin, Project] = attr.ib()
 
 
 class Order(enum.IntEnum):

@@ -1,24 +1,22 @@
 import functools
 import itertools
-import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, AbstractSet, Any, Iterator, List, Optional, Sequence, Tuple, Union
 
 import attr
 
-from .ast import (
+from .ast import IRI, Order, OrderCondition, Variable
+from .engine_ast import (
     BGP,
-    IRI,
     Distinct,
+    Filter,
+    GroupAggregate,
     LeftJoin,
-    Order,
-    OrderCondition,
+    Limit,
     Project,
     Reduced,
     TermPattern,
-    TermPatternPrime,
     TriplePattern,
-    Variable,
 )
 from .model import Key, Solution
 from .typing import Hexastore, Term, Triple
@@ -29,8 +27,6 @@ IS_NOT = IRI("http://example.org/isNot")
 SUBJECT = 1
 PREDICATE = 2
 OBJECT = 4
-
-logger = logging.getLogger(__name__)
 
 
 @functools.total_ordering
@@ -58,6 +54,10 @@ class VariableWithOrderInformation:
         return Variable(self.variable_name)
 
 
+TermPatternPrime = Union[IRI, str, VariableWithOrderInformation]
+TriplePatternPrime = Tuple[TermPatternPrime, TermPatternPrime, TermPatternPrime]
+
+
 def execute(
     store: Hexastore,
     patterns: Union[Sequence[TriplePattern], BGP, LeftJoin, Distinct],
@@ -68,7 +68,7 @@ def execute(
         bindings = Solution({}, order_by, set())
     engine_ = _Engine(store, order_by)
 
-    return engine_(patterns, bindings), engine_.stats
+    return list(engine_(patterns, bindings)), engine_.stats
 
 
 class _Engine:
@@ -107,14 +107,20 @@ class _Engine:
                 else:
                     solutions.append(bindings)
             return sorted(solutions)
+        elif isinstance(patterns, Filter):
+            solutions = self(patterns.pattern, bindings)
+            return filter(patterns.filter, solutions)
         elif isinstance(patterns, Project):
             rhs_solutions = self(patterns.pattern, bindings)
-            return sorted(
+            return (
                 Solution({v: s.get(v) for v in patterns.variables}, self.order_by, s.triples) for s in rhs_solutions
             )
         elif isinstance(patterns, Distinct) or isinstance(patterns, Reduced):
             solutions = self(patterns.pattern, bindings)
-            return [s for s, _ in itertools.groupby(solutions)]
+            return (s for s, _ in itertools.groupby(solutions))
+        elif isinstance(patterns, GroupAggregate):
+            rhs_solutions = self(patterns.pattern, bindings)
+            return self._group_aggregate(patterns.variables, patterns.function, rhs_solutions)
         else:
             print(f"type {type(patterns)}")
             assert False
@@ -145,8 +151,6 @@ class _Engine:
             yield from map(_Merge(s), self._match(tp))
 
     def _match(self, triple_pattern_: TriplePattern) -> Iterator[Solution]:
-        logger.debug(f"triple_pattern_ {triple_pattern_}")
-
         triple_pattern, index_key = tuple(
             zip(
                 *sorted(
@@ -208,6 +212,12 @@ class _Engine:
             if triple_pattern[2] in index[triple_pattern[0]][triple_pattern[1]]:
                 self.stats.increment_triples()
                 yield Solution({}, self.order_by, {transform(triple_pattern)})
+
+    def _group_aggregate(self, variables, function, rhs_solutions):
+        for key, subsolutions in itertools.groupby(
+            rhs_solutions, lambda s: Solution({v: s.get(v) for v in variables}, self.order_by, s.triples)
+        ):
+            yield function(key, subsolutions)
 
 
 def _s(term: TermPattern, solution: Solution) -> TermPattern:

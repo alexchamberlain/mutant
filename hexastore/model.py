@@ -1,5 +1,5 @@
 import functools
-import io
+import logging
 from typing import AbstractSet, Dict, List, Optional, Tuple, TypeVar, Union, overload
 
 from immutables import Map
@@ -86,7 +86,9 @@ class Solution:
 
             d = mm.finish()
 
-        return Solution(d, self._o, triples)
+        r = Solution(d, self._o, triples)
+        logging.debug(f"r={r}")
+        return r
 
     @overload
     def get(self, key: Variable, default: Term) -> Term:
