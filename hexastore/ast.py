@@ -45,7 +45,7 @@ class BlankNode:
 
 
 @functools.total_ordering
-@attr.s(frozen=True, cmp=False, hash=True)
+@attr.s(frozen=True, eq=False, hash=True)
 class IRI:
     value: str = attr.ib()
 
@@ -69,7 +69,7 @@ class IRI:
 
 
 @functools.total_ordering
-@attr.s(frozen=True, cmp=False, hash=True)
+@attr.s(frozen=True, eq=False, hash=True)
 class LangTaggedString:
     value: str = attr.ib()
     language: str = attr.ib()
@@ -94,7 +94,7 @@ class LangTaggedString:
 
 
 @functools.total_ordering
-@attr.s(frozen=True, cmp=False, hash=True)
+@attr.s(frozen=True, eq=False, hash=True)
 class TypedLiteral:
     value: str = attr.ib()
     datatype: IRI = attr.ib()
@@ -119,7 +119,7 @@ class TypedLiteral:
 
 
 @functools.total_ordering
-@attr.s(frozen=True, cmp=False, hash=True)
+@attr.s(frozen=True, eq=False, hash=True)
 class Variable:
     value: str = attr.ib()
 

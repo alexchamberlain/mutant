@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 @functools.total_ordering
-@attr.s(frozen=True, cmp=False, hash=True)
+@attr.s(frozen=True, eq=False, hash=True)
 class VariableWithOrderInformation:
     variable_name: str = attr.ib()
     order_by_index: int = attr.ib()
