@@ -17,7 +17,7 @@ class _Serialiser:
         self._store = store
         self._namespaces = namespaces
         self._blank_node_counter = 1
-        self._terms = {t: self._serialise_term(t) for t in store.terms()}
+        self._terms = {t: self._serialise_term(t) for t in store.terms}
 
         self._stats = defaultdict(Stat)
 

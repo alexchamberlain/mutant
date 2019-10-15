@@ -6,7 +6,7 @@ from decimal import Decimal
 import pytest
 from lark import Lark, Token
 
-from hexastore.ast import IRI, LangTaggedString, TypedLiteral
+from hexastore.ast import IRI, BlankNode, LangTaggedString, TypedLiteral
 from hexastore.blank_node_factory import BlankNodeFactory
 from hexastore.memory import InMemoryHexastore
 from hexastore.model import Key
@@ -38,7 +38,7 @@ def test_typed_literal(store):
         <http://bnb.data.bl.uk/id/person/%C3%96zbayKaan1964-/birth> <http://purl.org/vocab/bio/0.1/date> "1964"^^<http://www.w3.org/2001/XMLSchema#gYear> .
     """
 
-    parse(document, store.insert)
+    parse(document, store.insert, store.blank_node_factory)
 
     assert list(store.triples()) == [
         (
@@ -57,7 +57,7 @@ def test_turtle_example_2(store):
             <http://example.org/#green-goblin> .
     """
 
-    parse(document, store.insert)
+    parse(document, store.insert, store.blank_node_factory)
 
     assert list(store.triples()) == [
         (
@@ -76,7 +76,7 @@ def test_turtle_example_3(store):
             <http://xmlns.com/foaf/0.1/name> "Spiderman" .
     """
 
-    parse(document, store.insert)
+    parse(document, store.insert, store.blank_node_factory)
 
     assert list(store.triples()) == [
         (
@@ -94,7 +94,7 @@ def test_turtle_example_4(store):
         <http://example.org/#spiderman> <http://xmlns.com/foaf/0.1/name> "Spiderman", "Человек-паук"@ru .
     """
 
-    parse(document, store.insert)
+    parse(document, store.insert, store.blank_node_factory)
 
     assert list(store.triples()) == [
         (IRI("http://example.org/#spiderman"), IRI("http://xmlns.com/foaf/0.1/name"), "Spiderman"),
@@ -114,7 +114,7 @@ def test_turtle_example_7(store):
         <http://example.org/#green-goblin> somePrefix:enemyOf <http://example.org/#spiderman> .
     """
 
-    parse(document, store.insert)
+    parse(document, store.insert, store.blank_node_factory)
 
     assert list(store.triples()) == [
         (
@@ -133,7 +133,7 @@ def test_turtle_example_8(store):
         <http://example.org/#green-goblin> somePrefix:enemyOf <http://example.org/#spiderman> .
     """
 
-    parse(document, store.insert)
+    parse(document, store.insert, store.blank_node_factory)
 
     assert list(store.triples()) == [
         (
@@ -172,7 +172,7 @@ def test_turtle_example_9(store):
         <http://伝言.example/?user=أكرم&amp;channel=R%26D> a :subject8 .
     """
 
-    parse(document, store.insert)
+    parse(document, store.insert, store.blank_node_factory)
 
     assert list(store.triples()) == sorted(
         [
@@ -226,7 +226,7 @@ def test_turtle_example_10(store):
         <http://example.org/#spiderman> foaf:name "Spiderman" .
     """
 
-    parse(document, store.insert)
+    parse(document, store.insert, store.blank_node_factory)
 
     assert list(store.triples()) == [
         (IRI("http://example.org/#green-goblin"), IRI("http://xmlns.com/foaf/0.1/name"), "Green Goblin"),
@@ -252,7 +252,7 @@ literal with many quotes (\"\"\"\"\")
 and up to two sequential apostrophes ('').''' .
     """
 
-    parse(document, store.insert)
+    parse(document, store.insert, store.blank_node_factory)
 
     assert (
         IRI("http://example.org/vocab/show/218"),
@@ -272,7 +272,7 @@ def test_turtle_example_12(store):
             :specificGravity 1.663E-4 .
     """
 
-    parse(document, store.insert)
+    parse(document, store.insert, store.blank_node_factory)
 
     assert list(store.triples()) == [
         (
@@ -282,6 +282,23 @@ def test_turtle_example_12(store):
         ),
         (IRI("http://en.wikipedia.org/wiki/Helium"), IRI("http://example.org/elements#atomicNumber"), 2),
         (IRI("http://en.wikipedia.org/wiki/Helium"), IRI("http://example.org/elements#specificGravity"), 1.663e-4),
+    ]
+
+
+@pytest.mark.turtle
+def test_turtle_example_15(store):
+    document = """
+        @prefix foaf: <http://xmlns.com/foaf/0.1/> .
+
+        # Someone knows someone else, who has the name "Bob".
+        [] foaf:knows [ foaf:name "Bob" ] .
+    """
+
+    parse(document, store.insert, store.blank_node_factory)
+
+    assert list(store.triples()) == [
+        (BlankNode(0, store.blank_node_factory), IRI("http://xmlns.com/foaf/0.1/knows"), BlankNode(1, store.blank_node_factory)),
+        (BlankNode(1, store.blank_node_factory), IRI("http://xmlns.com/foaf/0.1/name"), "Bob"),
     ]
 
 
@@ -296,7 +313,7 @@ def test_turtleX_example_3(store):
         <<:bob foaf:age 23>> dct:creator <http://example.com/crawlers#c1> ;
             dct:source <http://example.net/homepage-listing.html> .
     """
-    parse(document, store.insert)
+    parse(document, store.insert, store.blank_node_factory)
 
     assert list(store.triples()) == [
         (
@@ -326,7 +343,7 @@ def test_turtleX_example_3_serialise(store):
             dct:source <http://example.net/homepage-listing.html> .
     """
 
-    parse(document, store.insert)
+    parse(document, store.insert, store.blank_node_factory)
 
     out = io.StringIO()
     serialise(

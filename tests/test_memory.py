@@ -89,7 +89,7 @@ def test_contains(store):
 
 @pytest.mark.memory
 def test_terms(store):
-    assert list(store.terms()) == [
+    assert store.terms == [
         DAVE_SMITH,
         ERIC_MILLER,
         TYPE,
@@ -267,7 +267,7 @@ def test_contains_versioned_store(versioned_store):
 
 @pytest.mark.memory
 def test_terms_versioned_store(versioned_store):
-    assert list(versioned_store.terms()) == [
+    assert versioned_store.terms == [
         DAVE_SMITH,
         ERIC_MILLER,
         TYPE,

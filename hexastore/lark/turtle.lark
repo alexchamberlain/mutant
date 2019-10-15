@@ -50,7 +50,8 @@ _iri: iriref | _prefixed_name
 //[136s]  PrefixedName    ::= PNAME_LN | PNAME_NS
 _prefixed_name: pname_ln | PNAME_NS
 //[137s]  BlankNode   ::= BLANK_NODE_LABEL | ANON
-blank_node: BLANK_NODE_LABEL | ANON
+blank_node: BLANK_NODE_LABEL
+    | ANON -> anonymous_blank_node
 
 triple_x: "<<" subject_x _predicate object_x ">>"
 subject_x: _iri | blank_node | triple_x

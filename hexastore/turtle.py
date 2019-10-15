@@ -19,11 +19,13 @@ TriplePattern = Tuple[TermPattern, TermPattern, TermPattern]
 
 @v_args(inline=True)
 class _Transformer(Transformer):
-    def __init__(self, insert):
+    def __init__(self, insert, blank_node_factory):
         self._insert = insert
         self._base_uri: Optional[IRI] = None
         self._namespaces: Dict[str, Namespace] = {}
         self._bnodes: Dict[str, BlankNode] = {}
+
+        self.blank_node_factory = blank_node_factory
 
     @property
     def namespaces(self):
@@ -127,9 +129,20 @@ class _Transformer(Transformer):
         self._insert(*t)
         return t
 
+    def anonymous_blank_node(self, _):
+        return self.blank_node_factory()
 
-def parse(document, store):
-    transformer = _Transformer(store)
+    def blank_node_property_list(self, po):
+        node = self.blank_node_factory()
+
+        for p, o in po:
+            self._insert(node, p, o)
+
+        return node
+
+
+def parse(document, inserter, blank_node_factory):
+    transformer = _Transformer(inserter, blank_node_factory)
     turtle_parser = Lark(
         pkgutil.get_data("hexastore", "lark/turtle.lark").decode(),
         start="turtle_document",

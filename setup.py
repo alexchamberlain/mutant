@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/alexchamberlain/mutant",
-    packages=["hexastore"],
+    packages=["hexastore", "hexastore.disk"],
     package_data={"hexastore": ["lark/*.lark", "rules/*.mtt"]},
     scripts=["mutant.py"],
     classifiers=[

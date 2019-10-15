@@ -51,6 +51,9 @@ class TrunkPayload:
     def __contains__(self, x: Any) -> bool:
         return x in self.map
 
+    def __len__(self) -> int:
+        return len(self.map)
+
 
 _TrunkMappingType = DefaultSortedMapping[Term, TrunkPayload]
 
@@ -259,6 +262,7 @@ class VersionedInMemoryHexastore:
         assert s in self.ops[o][p]
         assert o in self.pso[p][s]
 
+    @property
     def terms(self) -> SortedList[Term]:
         return SortedList(set(itertools.chain(self.spo.keys(), self.pos.keys(), self.osp.keys())), key=Key)
 
@@ -322,6 +326,15 @@ class _Branch:
         else:
             return self._mapping == other
 
+    def __len__(self) -> int:
+        return len(self._mapping)
+
+    def keys(self):
+        return self._mapping.keys()
+
+    def __iter__(self):
+        return iter(self._mapping)
+
 
 class _ListAdapter:
     def __init__(self, leaf):
@@ -330,12 +343,18 @@ class _ListAdapter:
     def __repr__(self) -> str:
         return f"_ListAdapter({self._leaf})"
 
+    def __len__(self):
+        return len(self._leaf)
+
     def iter(self, order: Order = Order.ASCENDING, triple_counter=None) -> Iterator[Term]:
         for o in self._leaf.iter(order):
             if triple_counter:
                 triple_counter()
 
             yield o
+
+    def __iter__(self):
+        return self.iter()
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, _ListAdapter):
@@ -476,6 +495,7 @@ class InMemoryHexastore:
         assert s not in self.ops[o][p]
         assert o not in self.pso[p][s]
 
+    @property
     def terms(self) -> SortedList[Term]:
         return SortedList(set(itertools.chain(self.spo.keys(), self.pos.keys(), self.osp.keys())), key=Key)
 
