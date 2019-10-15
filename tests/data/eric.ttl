@@ -1,0 +1,18 @@
+@prefix eric: <http://www.w3.org/People/EM/contact#> .
+@prefix alex: <https://alexchamberlain.co.uk/#> .
+@prefix contact: <http://www.w3.org/2000/10/swap/pim/contact#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix schema: <https://schema.org/> .
+
+# Be very careful changing this file. The structure has been
+# "carefully" designed to ensure full coverage of `disk.builder`,
+# whilst being fairly minimal.
+
+eric:me contact:fullName "Eric Miller" ;
+    contact:mailbox <mailto:e.miller123(at)example> ;
+    contact:personalTitle "Dr." ;
+    rdf:type contact:Person .
+
+alex:me contact:fullName "Alex Chamberlain" ;
+    schema:name "Alex Chamberlain" ;
+    rdf:type contact:Person .

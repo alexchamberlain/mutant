@@ -1,0 +1,16 @@
+@prefix eric: <http://www.w3.org/People/EM/contact#> .
+@prefix alex: <https://alexchamberlain.co.uk/#> .
+@prefix contact: <http://www.w3.org/2000/10/swap/pim/contact#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix schema: <https://schema.org/> .
+
+alex:me rdf:type contact:Person ;
+    schema:name "Alex Chamberlain" ;
+    schema:spouse alex:laura .
+
+
+alex:laura rdf:type contact:Person ;
+    schema:name "Laura Chamberlain" .
+
+<< alex:me schema:spouse alex:laura >>
+    alex:interviewWith alex:me .

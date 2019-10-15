@@ -297,7 +297,11 @@ def test_turtle_example_15(store):
     parse(document, store.insert, store.blank_node_factory)
 
     assert list(store.triples()) == [
-        (BlankNode(0, store.blank_node_factory), IRI("http://xmlns.com/foaf/0.1/knows"), BlankNode(1, store.blank_node_factory)),
+        (
+            BlankNode(0, store.blank_node_factory),
+            IRI("http://xmlns.com/foaf/0.1/knows"),
+            BlankNode(1, store.blank_node_factory),
+        ),
         (BlankNode(1, store.blank_node_factory), IRI("http://xmlns.com/foaf/0.1/name"), "Bob"),
     ]
 
