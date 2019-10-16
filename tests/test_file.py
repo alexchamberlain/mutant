@@ -171,10 +171,10 @@ def test_full_circle():
     _manual_equality(handler.pso, pso)
 
     assert (
-                IRI("http://www.w3.org/People/EM/contact#me"),
-                IRI("http://www.w3.org/2000/10/swap/pim/contact#fullName"),
-                "Eric Miller",
-            ) in handler
+        IRI("http://www.w3.org/People/EM/contact#me"),
+        IRI("http://www.w3.org/2000/10/swap/pim/contact#fullName"),
+        "Eric Miller",
+    ) in handler
     assert (
         handler.index(
             (
@@ -185,12 +185,12 @@ def test_full_circle():
         )
         == 1
     )
-    
+
     assert (
-                IRI("http://www.w3.org/People/EM/contact#me"),
-                IRI("http://www.w3.org/2000/10/swap/pim/contact#fullName"),
-                "Alex Chamberlain",
-            ) not in handler
+        IRI("http://www.w3.org/People/EM/contact#me"),
+        IRI("http://www.w3.org/2000/10/swap/pim/contact#fullName"),
+        "Alex Chamberlain",
+    ) not in handler
     assert (
         handler.index(
             (
@@ -203,10 +203,10 @@ def test_full_circle():
     )
 
     assert (
-                IRI("http://www.w3.org/People/EM/contact#me"),
-                IRI("http://www.w3.org/2000/10/swap/pim/contact#fullName"),
-                "Foobar",
-            ) not in handler
+        IRI("http://www.w3.org/People/EM/contact#me"),
+        IRI("http://www.w3.org/2000/10/swap/pim/contact#fullName"),
+        "Foobar",
+    ) not in handler
     assert (
         handler.index(
             (

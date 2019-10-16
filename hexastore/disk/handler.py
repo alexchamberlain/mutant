@@ -176,8 +176,14 @@ class _FileHandlerTrunkMapping:
         except KeyError:
             return False
 
+    def __contains__(self, triple):
+        return triple[2] in self[triple[0]][triple[1]]
+
     def __getitem__(self, key):
-        return _FileHandlerBranchMapping(self._int_mapping[self._to_int(key)], self._to_int, self._from_int)
+        try:
+            return _FileHandlerBranchMapping(self._int_mapping[self._to_int(key)], self._to_int, self._from_int)
+        except ValueError:
+            raise KeyError(key)
 
     def items(self, order=Order.ASCENDING):
         for k, v in self._int_mapping.items():
@@ -272,7 +278,7 @@ class _DictWrapper:
             iterable = reversed(iterable)
 
         for k, v in iterable:
-            yield k, [vv for vv in v]
+            yield k, v
 
 
 class _FileHandlerBranchMapping:
@@ -300,11 +306,14 @@ class _FileHandlerBranchMapping:
             return False
 
     def __getitem__(self, term):
-        return [self._from_int(vv) for vv in self._int_mapping[self._to_int(term)]]
+        try:
+            return _IntSequenceAdaptor(self._int_mapping[self._to_int(term)], self._from_int)
+        except ValueError:
+            raise KeyError(term)
 
     def items(self, order=Order.ASCENDING):
-        for k, v in self._int_mapping.items():
-            yield self._from_int(k), [self._from_int(vv) for vv in v]
+        for k, v in self._int_mapping.items(order=order):
+            yield self._from_int(k), _IntSequenceAdaptor(v, self._from_int)
 
 
 class _FileHandlerBranchIntMapping:
@@ -367,7 +376,7 @@ class _TermSequence:
         return len(self._sequence)
 
     def __repr__(self):
-        return "[{!r}]".format(", ".join(v) for v in self)
+        return "[{}]".format(", ".join(v) for v in self)
 
     def __eq__(self, other):
         if not isinstance(other, list):
@@ -440,7 +449,7 @@ class _FileHandlerSequence:
         i = bisect.bisect_left(self, x)
         if i != len(self) and self[i] == x:
             return i
-        raise ValueError
+        raise ValueError(x)
 
     def __getitem__(self, key):
         assert isinstance(key, int)
@@ -458,3 +467,32 @@ class _FileHandlerSequence:
         for key in range(self.length):
             offset -= self.element_struct.size
             yield self.element_struct.unpack_from(self.mmapper, offset)
+
+
+class _IntSequenceAdaptor:
+    def __init__(self, l, from_int):
+        self._l = l
+        self._from_int = from_int
+
+    def __len__(self):
+        return len(self._l)
+
+    def __getitem__(self, i):
+        return self._from_int(self._l[i])
+
+    def __iter__(self):
+        return map(self._from_int, self._l)
+
+    def __reversed__(self):
+        return map(self._from_int, reversed(self._l))
+
+    def iter(self, order=Order.ASCENDING, triple_counter=None):
+        iterable = [self._l, reversed(self._l)][order]
+        for v in iterable:
+            if triple_counter:
+                triple_counter()
+
+            yield self._from_int(v)
+
+    def __eq__(self, other):
+        return len(self._l) == len(other) and all(self._from_int(x) == y for x, y in zip(self._l, other))
