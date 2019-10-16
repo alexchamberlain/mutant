@@ -1,0 +1,8 @@
+@prefix alex: <https://alexchamberlain.co.uk/#> .
+@prefix contact: <http://www.w3.org/2000/10/swap/pim/contact#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix schema: <https://schema.org/> .
+
+alex:me a schema:Person ;
+    schema:name "Alex Chamberlain" ;
+    schema:birthDate "1990-02-24"^^schema:Date .

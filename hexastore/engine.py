@@ -128,22 +128,29 @@ class _Engine:
                     for o in oid.iter(order[2], self.stats.increment_triples):
                         yield dzip(variables_3, (s, p, o), self.order_by, {transform((s, p, o))})
         elif isinstance(triple_pattern[1], VariableWithOrderInformation):
-            s = triple_pattern[0]
-            po = index[s]
-            variables_2 = (triple_pattern[1].to_variable(), triple_pattern[2].to_variable())
-            for p, o_list in po.items(order=triple_pattern[1].order_by_direction):
-                for o in o_list.iter(triple_pattern[2].order_by_direction, self.stats.increment_triples):
-                    yield dzip(variables_2, (p, o), self.order_by, {transform((s, p, o))})
+            try:
+                s = triple_pattern[0]
+                po = index[s]
+                variables_2 = (triple_pattern[1].to_variable(), triple_pattern[2].to_variable())
+                for p, o_list in po.items(order=triple_pattern[1].order_by_direction):
+                    for o in o_list.iter(triple_pattern[2].order_by_direction, self.stats.increment_triples):
+                        yield dzip(variables_2, (p, o), self.order_by, {transform((s, p, o))})
+            except KeyError:
+                return
         elif isinstance(triple_pattern[2], VariableWithOrderInformation):
-            s = triple_pattern[0]
-            p = triple_pattern[1]
-            po = index[s]
-            o_list = po[p]
-            variables_1 = (triple_pattern[2].to_variable(),)
-            for o in o_list.iter(triple_pattern[2].order_by_direction, self.stats.increment_triples):
-                yield dzip(variables_1, (o,), self.order_by, {transform((s, p, o))})
+            try:
+                s = triple_pattern[0]
+                p = triple_pattern[1]
+                po = index[s]
+                o_list = po[p]
+                variables_1 = (triple_pattern[2].to_variable(),)
+                for o in o_list.iter(triple_pattern[2].order_by_direction, self.stats.increment_triples):
+                    yield dzip(variables_1, (o,), self.order_by, {transform((s, p, o))})
+            except KeyError:
+                return
         else:
-            if triple_pattern in self.store:
+            if triple_pattern in index:
+                self.stats.increment_triples()
                 yield Solution({}, self.order_by, {transform(triple_pattern)})
 
 

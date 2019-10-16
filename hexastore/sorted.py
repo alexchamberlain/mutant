@@ -99,7 +99,7 @@ class SortedList(Sequence[T], AbstractSet[T]):
         if i != end and self[i] == x:
             return i
 
-        raise ValueError
+        raise ValueError(x)
 
     def index_or_insert(self, x: T, hint: Optional[int] = 0) -> Tuple[int, bool]:
         end = len(self._l)
