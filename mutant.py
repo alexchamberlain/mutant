@@ -8,7 +8,9 @@ import click
 
 from hexastore import generic_rule, turtle, turtle_serialiser
 from hexastore.ast import IRI
-from hexastore.default_forward_reasoner import default_forward_reasoner
+from hexastore.blank_node_factory import BlankNodeFactory
+from hexastore.default_forward_reasoner import make_default_forward_reasoner
+from hexastore.disk import Builder
 from hexastore.memory import InMemoryHexastore
 from hexastore.namespace import Namespace
 
@@ -41,7 +43,8 @@ def cli(log_file):
 @click.argument("filenames", nargs=-1)
 @click.argument("output", nargs=1)
 def cat(namespace, filenames, output):
-    store = VersionedInMemoryHexastore()
+    blank_node_factory = BlankNodeFactory()
+    store = InMemoryHexastore(blank_node_factory)
 
     namespaces: Dict[str, Namespace] = {n: Namespace(n, IRI(i)) for n, i in namespace}
 
@@ -51,10 +54,12 @@ def cat(namespace, filenames, output):
                 if filename.endswith("ttl") or filename.endswith("nt"):
                     triples = []
                     with open(filename) as fo:
-                        new_namespaces = turtle.parse(fo.read(), lambda s, p, o: triples.append((s, p, o)))
+                        new_namespaces = turtle.parse(
+                            fo.read(), lambda s, p, o: triples.append((s, p, o)), blank_node_factory
+                        )
 
                     _update_namespaces(namespaces, new_namespaces)
-                    store.bulk_insert(triples, 1)
+                    store.bulk_insert(triples)
                 else:
                     raise RuntimeError(f"Unknown file {filename}")
     finally:
@@ -64,8 +69,12 @@ def cat(namespace, filenames, output):
         with Timer() as t:
             print(f"# Triples {len(store)}")
 
-            with smart_open(output) as fo:
-                turtle_serialiser.serialise(store, fo, [(n.name, n.prefix) for n in namespaces.values()])
+            if output.endswith("has"):
+                builder = Builder(output, store)
+                builder.serialise()
+            else:
+                with smart_open(output) as fo:
+                    turtle_serialiser.serialise(store, fo, [(n.name, n.prefix) for n in namespaces.values()])
     finally:
         logger.info(f"Serialisation took {t.interval} seconds.")
 
@@ -76,7 +85,7 @@ def cat(namespace, filenames, output):
 @click.argument("output", nargs=1)
 def reason(namespace, filenames, output):
     store = InMemoryHexastore()
-    reasoner = default_forward_reasoner(store)
+    reasoner = make_default_forward_reasoner(store)
 
     namespaces: Dict[str, Namespace] = {n: Namespace(n, IRI(i)) for n, i in namespace}
 
@@ -132,11 +141,11 @@ def smart_open(filename=None):
 
 class Timer:
     def __enter__(self):
-        self.start = time.clock()
+        self.start = time.perf_counter()
         return self
 
     def __exit__(self, *args):
-        self.end = time.clock()
+        self.end = time.perf_counter()
         self.interval = self.end - self.start
 
 

@@ -1,10 +1,10 @@
-import itertools
+import decimal
 import mmap
 import os
 from collections import defaultdict
 
-from ..ast import IRI, BlankNode
-from .binary import HEADER, LENGTH_PREFIX, TERM, TERM_PAYLOAD, TRUNK_PAYLOAD
+from ..ast import IRI, BlankNode, LangTaggedString, TypedLiteral
+from .binary import DOUBLE_PAYLOAD, HEADER, INT_PAYLOAD, LENGTH_PREFIX, TERM, TERM_PAYLOAD, TRUNK_PAYLOAD
 
 
 class Builder:
@@ -26,7 +26,22 @@ class Builder:
         self.term_map = {}
 
     def serialise(self):
-        iri_start, string_start, string_offset = self._serialise_terms()
+        (
+            iri_start,
+            string_start,
+            string_offset,
+            lang_tagged_string_start,
+            lang_tagged_string_offset,
+            int_start,
+            int_offset,
+            decimal_start,
+            decimal_offset,
+            float_start,
+            float_offset,
+            typed_literal_start,
+            typed_literal_offset,
+            n_terms,
+        ) = self._serialise_terms()
 
         remainder = self.next_array % 4
         if remainder:
@@ -44,6 +59,17 @@ class Builder:
             iri_start,
             string_start,
             string_offset,
+            lang_tagged_string_start,
+            lang_tagged_string_offset,
+            int_start,
+            int_offset,
+            decimal_start,
+            decimal_offset,
+            float_start,
+            float_offset,
+            typed_literal_start,
+            typed_literal_offset,
+            n_terms,
             spo_offset,
             len(self.store.spo),
             pos_offset,
@@ -59,6 +85,16 @@ class Builder:
         iri_start = self.n_triples
         string_start = self.n_triples
         string_offset = 0
+        lang_tagged_string_start = self.n_triples
+        lang_tagged_string_offset = 0
+        int_start = self.n_triples
+        int_offset = 0
+        decimal_start = self.n_triples
+        decimal_offset = 0
+        float_start = self.n_triples
+        float_offset = 0
+        typed_literal_start = self.n_triples
+        typed_literal_offset = 0
 
         t_offset = 0
         for i, t in enumerate(self.terms):
@@ -69,6 +105,11 @@ class Builder:
 
                 iri_start += 1
                 string_start += 1
+                lang_tagged_string_start += 1
+                int_start += 1
+                decimal_start += 1
+                float_start += 1
+                typed_literal_start += 1
             elif isinstance(t, IRI):
                 self.term_map[t] = i + self.n_triples - t_offset
 
@@ -79,6 +120,11 @@ class Builder:
                 self.next_array += len(b)
 
                 string_start += 1
+                lang_tagged_string_start += 1
+                int_start += 1
+                decimal_start += 1
+                float_start += 1
+                typed_literal_start += 1
             elif isinstance(t, str):
                 self.term_map[t] = i + self.n_triples - t_offset
 
@@ -90,10 +136,112 @@ class Builder:
                 self.next_array += LENGTH_PREFIX.size
                 self.mmapper[self.next_array : self.next_array + len(b)] = b
                 self.next_array += len(b)
+
+                lang_tagged_string_start += 1
+                int_start += 1
+                decimal_start += 1
+                float_start += 1
+                typed_literal_start += 1
+            elif isinstance(t, LangTaggedString):
+                self.term_map[t] = i + self.n_triples - t_offset
+
+                if lang_tagged_string_offset == 0:
+                    lang_tagged_string_offset = self.next_array
+
+                b = t.value.encode()
+                LENGTH_PREFIX.pack_into(self.mmapper, self.next_array, len(b))
+                self.next_array += LENGTH_PREFIX.size
+                self.mmapper[self.next_array : self.next_array + len(b)] = b
+                self.next_array += len(b)
+
+                #  TODO: Languages come from a distinct list - how can we use that
+                #   to our advantage?
+                b = t.language.encode()
+                LENGTH_PREFIX.pack_into(self.mmapper, self.next_array, len(b))
+                self.next_array += LENGTH_PREFIX.size
+                self.mmapper[self.next_array : self.next_array + len(b)] = b
+                self.next_array += len(b)
+
+                int_start += 1
+                decimal_start += 1
+                float_start += 1
+                typed_literal_start += 1
+            elif isinstance(t, int):
+                self.term_map[t] = i + self.n_triples - t_offset
+
+                if int_offset == 0:
+                    int_offset = self.next_array
+
+                #  TODO: Compress small integers; support big ints
+                INT_PAYLOAD.pack_into(self.mmapper, self.next_array, t)
+                self.next_array += INT_PAYLOAD.size
+
+                decimal_start += 1
+                float_start += 1
+                typed_literal_start += 1
+            elif isinstance(t, decimal.Decimal):
+                self.term_map[t] = i + self.n_triples - t_offset
+
+                if decimal_offset == 0:
+                    decimal_offset = self.next_array
+
+                b = str(t).encode()
+                LENGTH_PREFIX.pack_into(self.mmapper, self.next_array, len(b))
+                self.next_array += LENGTH_PREFIX.size
+                self.mmapper[self.next_array : self.next_array + len(b)] = b
+                self.next_array += len(b)
+
+                float_start += 1
+                typed_literal_start += 1
+            elif isinstance(t, float):
+                self.term_map[t] = i + self.n_triples - t_offset
+
+                if float_offset == 0:
+                    float_offset = self.next_array
+
+                DOUBLE_PAYLOAD.pack_into(self.mmapper, self.next_array, t)
+                self.next_array += DOUBLE_PAYLOAD.size
+
+                typed_literal_start += 1
+            elif isinstance(t, TypedLiteral):
+                self.term_map[t] = i + self.n_triples - t_offset
+
+                if typed_literal_offset == 0:
+                    typed_literal_offset = self.next_array
+
+                b = t.value.encode()
+                LENGTH_PREFIX.pack_into(self.mmapper, self.next_array, len(b))
+                self.next_array += LENGTH_PREFIX.size
+                self.mmapper[self.next_array : self.next_array + len(b)] = b
+                self.next_array += len(b)
+
+                b = t.datatype.value.encode()
+                LENGTH_PREFIX.pack_into(self.mmapper, self.next_array, len(b))
+                self.next_array += LENGTH_PREFIX.size
+                self.mmapper[self.next_array : self.next_array + len(b)] = b
+                self.next_array += len(b)
             else:
                 assert False, type(t)
 
-        return iri_start, string_start, string_offset
+        n_terms = i + 1
+
+        # TODO: This is clearly terrible code.
+        return (
+            iri_start,
+            string_start,
+            string_offset,
+            lang_tagged_string_start,
+            lang_tagged_string_offset,
+            int_start,
+            int_offset,
+            decimal_start,
+            decimal_offset,
+            float_start,
+            float_offset,
+            typed_literal_start,
+            typed_literal_offset,
+            n_terms,
+        )
 
     def _serialise(self, index, reverse_index):
         array = index.keys()

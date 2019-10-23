@@ -1,12 +1,21 @@
 import bisect
+import decimal
 import mmap
 import os
 from typing import Optional, Tuple
 
-from ..ast import IRI, Order
+from ..ast import IRI, LangTaggedString, Order, TypedLiteral
 from ..model import Key
 from ..sorted import SortedList
-from .binary import HEADER, LENGTH_PREFIX, TERM, TERM_PAYLOAD, TRUNK_PAYLOAD
+from .binary import DOUBLE_PAYLOAD, HEADER, INT_PAYLOAD, LENGTH_PREFIX, TERM, TERM_PAYLOAD, TRUNK_PAYLOAD
+
+
+def _get_offset(*args):
+    for offset in args:
+        if offset != 0:
+            return offset
+
+    assert False
 
 
 class FileHandler:
@@ -24,6 +33,17 @@ class FileHandler:
             self._iri_start,
             self._string_start,
             self._string_offset,
+            self._lang_tagged_string_start,
+            self._lang_tagged_string_offset,
+            self._int_start,
+            self._int_offset,
+            self._decimal_start,
+            self._decimal_offset,
+            self._float_start,
+            self._float_offset,
+            self._typed_literal_start,
+            self._typed_literal_offset,
+            self._n_terms,
             self._spo_offset,
             self._len_spo,
             self._pos_offset,
@@ -38,7 +58,15 @@ class FileHandler:
             terms.append(self.blank_node_factory())
 
         offset = HEADER.size
-        end_offset = self._string_offset if self._string_offset != 0 else self._spo_offset
+        end_offset = _get_offset(
+            self._string_offset,
+            self._lang_tagged_string_offset,
+            self._int_offset,
+            self._decimal_offset,
+            self._float_offset,
+            self._typed_literal_offset,
+            self._spo_offset,
+        )
         while offset < end_offset:
             if end_offset - offset < LENGTH_PREFIX.size:
                 break
@@ -52,14 +80,22 @@ class FileHandler:
 
         assert offset == self._string_offset or self._string_offset == 0
 
+        end_offset = _get_offset(
+            self._lang_tagged_string_offset,
+            self._int_offset,
+            self._decimal_offset,
+            self._float_offset,
+            self._typed_literal_offset,
+            self._spo_offset,
+        )
         if self._string_offset != 0:
-            while offset < self._spo_offset:
-                if self._spo_offset - offset < LENGTH_PREFIX.size:
+            while offset < end_offset:
+                if end_offset - offset < LENGTH_PREFIX.size:
                     break
                 length, = LENGTH_PREFIX.unpack_from(self.mmapper, offset)
                 offset += LENGTH_PREFIX.size
 
-                assert self._spo_offset - offset >= length
+                assert end_offset - offset >= length
 
                 if offset > self._string_offset and length == 0:
                     break
@@ -67,6 +103,121 @@ class FileHandler:
                 b = self.mmapper[offset : offset + length]
                 terms.append(b.decode())
                 offset += length
+
+        assert offset == self._lang_tagged_string_offset or self._lang_tagged_string_offset == 0
+
+        end_offset = _get_offset(
+            self._int_offset, self._decimal_offset, self._float_offset, self._typed_literal_offset, self._spo_offset
+        )
+        if self._lang_tagged_string_offset != 0:
+            while offset < end_offset:
+                if end_offset - offset < LENGTH_PREFIX.size:
+                    break
+                length, = LENGTH_PREFIX.unpack_from(self.mmapper, offset)
+                offset += LENGTH_PREFIX.size
+
+                assert end_offset - offset >= length
+
+                if offset > self._lang_tagged_string_offset and length == 0:
+                    break
+
+                b = self.mmapper[offset : offset + length]
+                value = b.decode()
+                offset += length
+
+                assert end_offset - offset >= LENGTH_PREFIX.size
+
+                length, = LENGTH_PREFIX.unpack_from(self.mmapper, offset)
+                offset += LENGTH_PREFIX.size
+
+                assert end_offset - offset >= length
+
+                if offset > self._lang_tagged_string_offset and length == 0:
+                    break
+
+                b = self.mmapper[offset : offset + length]
+                language = b.decode()
+                offset += length
+
+                terms.append(LangTaggedString(value, language))
+
+        assert offset == self._int_offset or self._int_offset == 0
+
+        end_offset = _get_offset(self._decimal_offset, self._float_offset, self._typed_literal_offset, self._spo_offset)
+        if self._int_offset != 0:
+            while offset < end_offset:
+                if end_offset - offset < INT_PAYLOAD.size:
+                    break
+                value, = INT_PAYLOAD.unpack_from(self.mmapper, offset)
+                offset += INT_PAYLOAD.size
+
+                terms.append(value)
+
+        assert offset == self._decimal_offset or self._decimal_offset == 0
+
+        end_offset = _get_offset(self._float_offset, self._typed_literal_offset, self._spo_offset)
+        if self._decimal_offset != 0:
+            while offset < end_offset:
+                if end_offset - offset < LENGTH_PREFIX.size:
+                    break
+                length, = LENGTH_PREFIX.unpack_from(self.mmapper, offset)
+                offset += LENGTH_PREFIX.size
+
+                assert end_offset - offset >= length
+
+                if offset > self._decimal_offset and length == 0:
+                    break
+
+                b = self.mmapper[offset : offset + length]
+                terms.append(decimal.Decimal(b.decode()))
+                offset += length
+
+        assert offset == self._float_offset or self._float_offset == 0
+
+        end_offset = _get_offset(self._typed_literal_offset, self._spo_offset)
+        if self._float_offset != 0:
+            while offset < end_offset:
+                if end_offset - offset < DOUBLE_PAYLOAD.size:
+                    break
+                value, = DOUBLE_PAYLOAD.unpack_from(self.mmapper, offset)
+                offset += DOUBLE_PAYLOAD.size
+
+                terms.append(value)
+
+        assert offset == self._typed_literal_offset or self._typed_literal_offset == 0
+
+        end_offset = self._spo_offset
+        if self._typed_literal_offset != 0:
+            while offset < end_offset:
+                if end_offset - offset < LENGTH_PREFIX.size:
+                    break
+                length, = LENGTH_PREFIX.unpack_from(self.mmapper, offset)
+                offset += LENGTH_PREFIX.size
+
+                assert end_offset - offset >= length
+
+                if offset > self._typed_literal_offset and length == 0:
+                    break
+
+                b = self.mmapper[offset : offset + length]
+                value = b.decode()
+                offset += length
+
+                assert end_offset - offset >= LENGTH_PREFIX.size
+
+                length, = LENGTH_PREFIX.unpack_from(self.mmapper, offset)
+                offset += LENGTH_PREFIX.size
+
+                assert end_offset - offset >= length
+
+                if offset > self._typed_literal_offset and length == 0:
+                    break
+
+                b = self.mmapper[offset : offset + length]
+                datatype = IRI(b.decode())
+                offset += length
+
+                terms.append(TypedLiteral(value, datatype))
 
         assert terms == sorted(terms, key=Key)
 
@@ -473,6 +624,9 @@ class _IntSequenceAdaptor:
     def __init__(self, l, from_int):
         self._l = l
         self._from_int = from_int
+
+    def __repr__(self):
+        return repr(list(iter(self)))
 
     def __len__(self):
         return len(self._l)

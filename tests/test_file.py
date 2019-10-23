@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-from hexastore import IRI, BlankNodeFactory, InMemoryHexastore
+from hexastore import IRI, BlankNodeFactory, InMemoryHexastore, TypedLiteral
 from hexastore.disk import Builder, FileHandler
 from hexastore.turtle import parse
 
@@ -219,6 +219,18 @@ def test_full_circle():
     )
 
     assert list(handler.triples()) == list(_flatten(spo))
+
+
+@pytest.mark.disk
+def test_full_circle_alex():
+    path = from_file_to_tmp(os.path.join(dir_path, "data/alex.ttl"))
+
+    blank_node_factory = BlankNodeFactory()
+    handler = FileHandler(path, blank_node_factory)
+
+    assert handler.spo[IRI("https://alexchamberlain.co.uk/#me")][IRI("https://schema.org/birthDate")] == [
+        TypedLiteral(value="1990-02-24", datatype=IRI(value="https://schema.org/Date"))  # datetime.date(1990, 2, 24)
+    ]
 
 
 @pytest.mark.disk
