@@ -5,6 +5,8 @@ from typing import List, Optional
 
 import attr
 
+from _hexastore import IRI
+
 
 @functools.total_ordering
 class BlankNode:
@@ -42,30 +44,6 @@ class BlankNode:
 
     def __repr__(self):
         return f"BlankNode({str(self)})"
-
-
-@functools.total_ordering
-@attr.s(frozen=True, eq=False, hash=True)
-class IRI:
-    value: str = attr.ib()
-
-    def __str__(self) -> str:
-        return self.value
-
-    def __bytes__(self) -> bytes:
-        return self.value.encode()
-
-    def __lt__(self, other: object) -> bool:
-        if isinstance(other, IRI):
-            return self.value < other.value
-        else:
-            return NotImplemented
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, IRI):
-            return False
-
-        return self.value == other.value
 
 
 @functools.total_ordering
