@@ -2,7 +2,7 @@ from unittest import mock
 
 import pytest
 
-from _hexastore import IRI, BlankNode, LangTaggedString, TypedLiteral
+from _hexastore import IRI, BlankNode, LangTaggedString, TypedLiteral, Variable
 
 
 @pytest.mark.extension
@@ -93,3 +93,19 @@ def test_TypedLiteral():
         TypedLiteral("foo", "foo")
 
     assert str(e.value) == "argument 2 must be _hexastore.IRI, not str"
+
+
+@pytest.mark.extension
+def test_Variable():
+    TITLE = Variable("a")
+
+    assert repr(TITLE) == "Variable(value='a')"
+    assert str(TITLE) == "a"
+    assert bytes(TITLE) == b"a"
+
+    assert TITLE == Variable("a")
+    assert TITLE != "a"
+
+    assert hash(TITLE)
+
+    assert TITLE.value == "a"

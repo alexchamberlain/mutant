@@ -5,31 +5,7 @@ from typing import List, Optional
 
 import attr
 
-from _hexastore import IRI, BlankNode, LangTaggedString, TypedLiteral
-
-
-@functools.total_ordering
-@attr.s(frozen=True, eq=False, hash=True)
-class Variable:
-    value: str = attr.ib()
-
-    def __str__(self) -> str:
-        return self.value
-
-    def __bytes__(self) -> bytes:
-        return self.value.encode()
-
-    def __lt__(self, other: object) -> bool:
-        if isinstance(other, Variable):
-            return self.value < other.value
-        else:
-            return NotImplemented
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Variable):
-            return False
-
-        return self.value == other.value
+from _hexastore import IRI, BlankNode, LangTaggedString, TypedLiteral, Variable
 
 
 class Order(enum.IntEnum):

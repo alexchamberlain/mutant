@@ -617,6 +617,147 @@ static PyTypeObject TypedLiteralType = {
     .tp_hash = (hashfunc) TypedLiteral_hash,
 };
 
+
+
+
+typedef struct {
+    PyObject_HEAD
+    PyObject* value;
+} VariableObject;
+
+static PyTypeObject VariableType;
+
+static void
+Variable_dealloc(VariableObject *self)
+{
+    Py_XDECREF(self->value);
+    Py_TYPE(self)->tp_free((PyObject *) self);
+}
+
+static PyObject *
+Variable_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+    VariableObject *self;
+    self = (VariableObject *) type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->value = PyUnicode_FromString("");
+        if (self->value == NULL) {
+            Py_DECREF(self);
+            return NULL;
+        }
+    }
+    return (PyObject *) self;
+}
+
+static int
+Variable_init(VariableObject *self, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"value", NULL};
+    PyObject *value = NULL, *tmp;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|U", kwlist, &value))
+        return -1;
+
+    if (value) {
+        tmp = self->value;
+        Py_INCREF(value);
+        self->value = value;
+        Py_XDECREF(tmp);
+    }
+
+    return 0;
+}
+
+static PyObject *
+Variable_repr(VariableObject * obj)
+{
+    return PyUnicode_FromFormat(
+        "Variable(value=%R)",
+        obj->value
+    );
+}
+
+
+static PyObject *
+Variable_str(VariableObject * obj)
+{
+    Py_INCREF(obj->value);
+    return obj->value;
+}
+
+
+static PyObject *
+Variable_bytes(VariableObject *self, PyObject *Py_UNUSED(ignored))
+{
+    return PyUnicode_AsEncodedString(self->value, "utf-8", "strict");
+}
+
+
+static PyObject *
+Variable_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
+{
+    if(!PyObject_TypeCheck(lhs_o, &VariableType) || !PyObject_TypeCheck(rhs_o, &VariableType))
+    {
+        PyObject *result = Py_NotImplemented;
+        Py_INCREF(result);
+        return result;
+    }
+
+    VariableObject *lhs = lhs_o;
+    VariableObject *rhs = rhs_o;
+
+    return PyObject_RichCompare(lhs->value, rhs->value, op);
+}
+
+
+static Py_hash_t *
+Variable_hash(VariableObject *o)
+{
+    return PyObject_Hash(o->value);
+}
+
+
+static PyObject *
+Variable_value(VariableObject *self, void *closure)
+{
+    Py_INCREF(self->value);
+    return self->value;
+}
+
+
+static PyGetSetDef Variable_getsetters[] = {
+    {"value", (getter) Variable_value, NULL, "value", NULL},
+    {NULL}  /* Sentinel */
+};
+
+
+static PyMethodDef Variable_methods[] = {
+    {"__bytes__", (PyCFunction) Variable_bytes, METH_NOARGS,
+     "Return bytes representation of the Variable."
+    },
+    {NULL}  /* Sentinel */
+};
+
+
+static PyTypeObject VariableType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "_hexastore.Variable",
+    .tp_doc = "Variable objects",
+    .tp_basicsize = sizeof(VariableObject),
+    .tp_itemsize = 0,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_new = Variable_new,
+    .tp_init = (initproc) Variable_init,
+    .tp_dealloc = (destructor) Variable_dealloc,
+    .tp_getset = Variable_getsetters,
+    .tp_methods = Variable_methods,
+    .tp_repr = (reprfunc) Variable_repr,
+    .tp_str = (reprfunc) Variable_str,
+    .tp_richcompare = Variable_richcmp,
+    .tp_hash = (hashfunc) Variable_hash,
+};
+
+
 static PyModuleDef _hexastoremodule = {
     PyModuleDef_HEAD_INIT,
     .m_name = "_hexastore",
@@ -638,6 +779,9 @@ PyInit__hexastore(void)
         return NULL;
 
     if (PyType_Ready(&TypedLiteralType) < 0)
+        return NULL;
+
+    if (PyType_Ready(&VariableType) < 0)
         return NULL;
 
     m = PyModule_Create(&_hexastoremodule);
@@ -677,6 +821,18 @@ PyInit__hexastore(void)
         Py_DECREF(m);
         return NULL;
     }
+
+    Py_INCREF(&VariableType);
+    if (PyModule_AddObject(m, "Variable", (PyObject *) &VariableType) < 0) {
+        Py_DECREF(&VariableType);
+        Py_DECREF(&TypedLiteralType);
+        Py_DECREF(&LangTaggedStringType);
+        Py_DECREF(&BlankNodeType);
+        Py_DECREF(&IRIType);
+        Py_DECREF(m);
+        return NULL;
+    }
+
 
     return m;
 }
