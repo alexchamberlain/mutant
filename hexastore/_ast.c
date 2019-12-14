@@ -211,13 +211,6 @@ BlankNode_str_repr(BlankNodeObject * obj)
 
 
 static PyObject *
-BlankNode_bytes(BlankNodeObject *self, PyObject *Py_UNUSED(ignored))
-{
-    return PyUnicode_AsEncodedString(self->factory, "utf-8", "strict");
-}
-
-
-static PyObject *
 BlankNode_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
 {
     PyObject *result;
@@ -281,6 +274,166 @@ static PyTypeObject BlankNodeType = {
     .tp_hash = (hashfunc) BlankNode_hash,
 };
 
+typedef struct {
+    PyObject_HEAD
+    PyObject* value;
+    PyObject* language;
+} LangTaggedStringObject;
+
+static PyTypeObject LangTaggedStringType;
+
+static void
+LangTaggedString_dealloc(LangTaggedStringObject *self)
+{
+    Py_XDECREF(self->language);
+    Py_XDECREF(self->value);
+    Py_TYPE(self)->tp_free((PyObject *) self);
+}
+
+static PyObject *
+LangTaggedString_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+    LangTaggedStringObject *self;
+    self = (LangTaggedStringObject *) type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->value = PyUnicode_FromString("");
+        if (self->value == NULL) {
+            Py_DECREF(self);
+            return NULL;
+        }
+        
+        self->language = PyUnicode_FromString("");
+        if (self->language == NULL) {
+            Py_DECREF(self->value);
+            Py_DECREF(self);
+            return NULL;
+        }
+    }
+    return (PyObject *) self;
+}
+
+static int
+LangTaggedString_init(LangTaggedStringObject *self, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"value", "language", NULL};
+    PyObject *value = NULL, *language = NULL, *tmp;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|UU", kwlist, &value, &language))
+    {
+        return -1;
+    }
+
+    if (value) {
+        tmp = self->value;
+        Py_INCREF(value);
+        self->value = value;
+        Py_XDECREF(tmp);
+    }
+
+    if (language) {
+        tmp = self->language;
+        Py_INCREF(language);
+        self->language = language;
+        Py_XDECREF(tmp);
+    }
+
+    return 0;
+}
+
+static PyObject *
+LangTaggedString_repr(LangTaggedStringObject * obj)
+{
+    return PyUnicode_FromFormat(
+        "LangTaggedString(value=%R, language=%R)",
+        obj->value,
+        obj->language
+    );
+}
+
+
+static PyObject *
+LangTaggedString_str(LangTaggedStringObject * obj)
+{
+    return PyUnicode_FromFormat(
+        "%R@%U",
+        obj->value,
+        obj->language
+    );
+}
+
+
+static PyObject *
+LangTaggedString_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
+{
+    if(!PyObject_TypeCheck(lhs_o, &LangTaggedStringType) || !PyObject_TypeCheck(rhs_o, &LangTaggedStringType))
+    {
+        PyObject *result = Py_NotImplemented;
+        Py_INCREF(result);
+        return result;
+    }
+
+    LangTaggedStringObject *lhs = lhs_o;
+    LangTaggedStringObject *rhs = rhs_o;
+
+    int r = PyObject_RichCompareBool(lhs->value, rhs->value, Py_EQ);
+
+    switch(r) {
+        case 1:
+            return PyObject_RichCompare(lhs->language, rhs->language, op);
+        case 0:
+            return PyObject_RichCompare(lhs->value, rhs->value, op);
+        default:
+            return NULL;
+    }
+}
+
+
+static Py_hash_t *
+LangTaggedString_hash(LangTaggedStringObject *o)
+{
+    // TODO: I have no idea if this is any good
+    return PyObject_Hash(o->value) * 0x093e0562 + PyObject_Hash(o->language);
+}
+
+
+static PyObject *
+LangTaggedString_value(LangTaggedStringObject *self, void *closure)
+{
+    Py_INCREF(self->value);
+    return self->value;
+}
+
+
+static PyObject *
+LangTaggedString_language(LangTaggedStringObject *self, void *closure)
+{
+    Py_INCREF(self->language);
+    return self->language;
+}
+
+static PyGetSetDef LangTaggedString_getsetters[] = {
+    {"value", (getter) LangTaggedString_value, NULL, "value", NULL},
+    {"language", (getter) LangTaggedString_language, NULL, "language", NULL},
+    {NULL}  /* Sentinel */
+};
+
+
+static PyTypeObject LangTaggedStringType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "_hexastore.LangTaggedString",
+    .tp_doc = "LangTaggedString objects",
+    .tp_basicsize = sizeof(LangTaggedStringObject),
+    .tp_itemsize = 0,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_new = LangTaggedString_new,
+    .tp_init = (initproc) LangTaggedString_init,
+    .tp_dealloc = (destructor) LangTaggedString_dealloc,
+    .tp_getset = LangTaggedString_getsetters,
+    .tp_repr = (reprfunc) LangTaggedString_repr,
+    .tp_str = (reprfunc) LangTaggedString_str,
+    .tp_richcompare = LangTaggedString_richcmp,
+    .tp_hash = (hashfunc) LangTaggedString_hash,
+};
 
 static PyModuleDef _hexastoremodule = {
     PyModuleDef_HEAD_INIT,
@@ -299,6 +452,9 @@ PyInit__hexastore(void)
     if (PyType_Ready(&BlankNodeType) < 0)
         return NULL;
 
+    if (PyType_Ready(&LangTaggedStringType) < 0)
+        return NULL;
+
     m = PyModule_Create(&_hexastoremodule);
     if (m == NULL)
         return NULL;
@@ -312,6 +468,15 @@ PyInit__hexastore(void)
 
     Py_INCREF(&BlankNodeType);
     if (PyModule_AddObject(m, "BlankNode", (PyObject *) &BlankNodeType) < 0) {
+        Py_DECREF(&BlankNodeType);
+        Py_DECREF(&IRIType);
+        Py_DECREF(m);
+        return NULL;
+    }
+
+    Py_INCREF(&LangTaggedStringType);
+    if (PyModule_AddObject(m, "LangTaggedString", (PyObject *) &LangTaggedStringType) < 0) {
+        Py_DECREF(&LangTaggedStringType);
         Py_DECREF(&BlankNodeType);
         Py_DECREF(&IRIType);
         Py_DECREF(m);

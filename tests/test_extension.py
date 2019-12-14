@@ -2,7 +2,7 @@ from unittest import mock
 
 import pytest
 
-from _hexastore import IRI, BlankNode
+from _hexastore import IRI, BlankNode, LangTaggedString
 
 
 @pytest.mark.extension
@@ -35,7 +35,7 @@ def test_IRI_mutation():
         TITLE.value = "http://xmlns.com/foaf/0.1/title2"
 
 
-@pytest.mark.ast
+@pytest.mark.extension
 def test_BlankNode():
     factory1 = mock.sentinel.factory1
     factory2 = mock.sentinel.factory2
@@ -50,3 +50,18 @@ def test_BlankNode():
     assert str(node1)
     assert repr(node1)
     assert hash(node1)
+
+
+@pytest.mark.extension
+def test_LangTaggedString():
+    str1 = LangTaggedString("foo", "en")
+    str2 = LangTaggedString("foo", "en")
+    str3 = LangTaggedString("foo", "de")
+    str4 = LangTaggedString("bar", "en")
+
+    assert str1 == str2
+    assert str1 != str3
+    assert str1 != str4
+
+    assert str3 < str1
+    assert str1 > str3

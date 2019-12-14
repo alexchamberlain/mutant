@@ -5,32 +5,7 @@ from typing import List, Optional
 
 import attr
 
-from _hexastore import IRI, BlankNode
-
-
-@functools.total_ordering
-@attr.s(frozen=True, eq=False, hash=True)
-class LangTaggedString:
-    value: str = attr.ib()
-    language: str = attr.ib()
-
-    def __str__(self) -> str:
-        return f'"{self.value}"@{self.language}'
-
-    def __lt__(self, other: object) -> bool:
-        if isinstance(other, LangTaggedString):
-            if self.value == other.value:
-                return self.language < other.language
-
-            return self.value < other.value
-        else:
-            return NotImplemented
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, LangTaggedString):
-            return False
-
-        return self.value == other.value and self.language == other.language
+from _hexastore import IRI, BlankNode, LangTaggedString
 
 
 @functools.total_ordering
