@@ -2,7 +2,7 @@ from unittest import mock
 
 import pytest
 
-from _hexastore import IRI, BlankNode, LangTaggedString
+from _hexastore import IRI, BlankNode, LangTaggedString, TypedLiteral
 
 
 @pytest.mark.extension
@@ -65,3 +65,31 @@ def test_LangTaggedString():
 
     assert str3 < str1
     assert str1 > str3
+
+
+@pytest.mark.extension
+def test_TypedLiteral():
+    type1 = IRI("http://example.com/type1")
+    type2 = IRI("http://example.com/type2")
+
+    str1 = TypedLiteral("foo", type1)
+    str2 = TypedLiteral("foo", type1)
+    str3 = TypedLiteral("foo", type2)
+    str4 = TypedLiteral("bar", type1)
+
+    assert str1 == str2
+    assert str1 != str3
+    assert str1 != str4
+
+    assert str3 > str1
+    assert str1 < str3
+
+    with pytest.raises(TypeError) as e:
+        TypedLiteral(type1, type1)
+
+    assert str(e.value) == "argument 1 must be str, not _hexastore.IRI"
+
+    with pytest.raises(TypeError) as e:
+        TypedLiteral("foo", "foo")
+
+    assert str(e.value) == "argument 2 must be _hexastore.IRI, not str"

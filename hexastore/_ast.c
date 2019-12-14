@@ -435,6 +435,188 @@ static PyTypeObject LangTaggedStringType = {
     .tp_hash = (hashfunc) LangTaggedString_hash,
 };
 
+typedef struct {
+    PyObject_HEAD
+    PyObject* value;
+    PyObject* datatype;
+} TypedLiteralObject;
+
+static PyTypeObject TypedLiteralType;
+
+static void
+TypedLiteral_dealloc(TypedLiteralObject *self)
+{
+    Py_XDECREF(self->datatype);
+    Py_XDECREF(self->value);
+    Py_TYPE(self)->tp_free((PyObject *) self);
+}
+
+static PyObject *
+IRI_FromString(const char *in)
+{
+    IRIObject *self;
+    self = (IRIObject *) IRIType.tp_alloc(&IRIType, 0);
+    if (self != NULL) {
+        self->value = PyUnicode_FromString(in);
+        if (self->value == NULL) {
+            Py_DECREF(self);
+            return NULL;
+        }
+    }
+    return (PyObject *) self;
+}
+
+static PyObject *
+TypedLiteral_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+    TypedLiteralObject *self;
+    self = (TypedLiteralObject *) type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->value = PyUnicode_FromString("");
+        if (self->value == NULL) {
+            Py_DECREF(self);
+            return NULL;
+        }
+        
+        self->datatype = IRI_FromString("");
+        if (self->datatype == NULL) {
+            Py_DECREF(self->value);
+            Py_DECREF(self);
+            return NULL;
+        }
+    }
+    return (PyObject *) self;
+}
+
+static int
+TypedLiteral_init(TypedLiteralObject *self, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"value", "datatype", NULL};
+    PyObject *value = NULL, *datatype = NULL, *tmp;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|UO", kwlist, &value, &datatype))
+    {
+        return -1;
+    }
+
+    if (value) {
+        tmp = self->value;
+        Py_INCREF(value);
+        self->value = value;
+        Py_XDECREF(tmp);
+    }
+
+    if (datatype) {
+        if (!PyObject_TypeCheck(datatype, &IRIType)) {
+            PyErr_SetString(PyExc_TypeError,
+                            "argument 2 must be _hexastore.IRI, not str");
+            return -1;
+        }
+
+        tmp = self->datatype;
+        Py_INCREF(datatype);
+        self->datatype = datatype;
+        Py_XDECREF(tmp);
+    }
+
+    return 0;
+}
+
+static PyObject *
+TypedLiteral_repr(TypedLiteralObject * obj)
+{
+    return PyUnicode_FromFormat(
+        "TypedLiteral(value=%R, datatype=%R)",
+        obj->value,
+        obj->datatype
+    );
+}
+
+
+static PyObject *
+TypedLiteral_str(TypedLiteralObject * obj)
+{
+    return PyUnicode_FromFormat(
+        "%R^^%R",
+        obj->value,
+        obj->datatype
+    );
+}
+
+
+static PyObject *
+TypedLiteral_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
+{
+    if(!PyObject_TypeCheck(lhs_o, &TypedLiteralType) || !PyObject_TypeCheck(rhs_o, &TypedLiteralType))
+    {
+        PyObject *result = Py_NotImplemented;
+        Py_INCREF(result);
+        return result;
+    }
+
+    TypedLiteralObject *lhs = lhs_o;
+    TypedLiteralObject *rhs = rhs_o;
+
+    int r = PyObject_RichCompareBool(lhs->value, rhs->value, Py_EQ);
+
+    switch(r) {
+        case 1:
+            return PyObject_RichCompare(lhs->datatype, rhs->datatype, op);
+        case 0:
+            return PyObject_RichCompare(lhs->value, rhs->value, op);
+        default:
+            return NULL;
+    }
+}
+
+
+static Py_hash_t *
+TypedLiteral_hash(TypedLiteralObject *o)
+{
+    // TODO: I have no idea if this is any good
+    return PyObject_Hash(o->value) * 0x093e0562 + PyObject_Hash(o->datatype);
+}
+
+
+static PyObject *
+TypedLiteral_value(TypedLiteralObject *self, void *closure)
+{
+    Py_INCREF(self->value);
+    return self->value;
+}
+
+
+static PyObject *
+TypedLiteral_datatype(TypedLiteralObject *self, void *closure)
+{
+    Py_INCREF(self->datatype);
+    return self->datatype;
+}
+
+static PyGetSetDef TypedLiteral_getsetters[] = {
+    {"value", (getter) TypedLiteral_value, NULL, "value", NULL},
+    {"datatype", (getter) TypedLiteral_datatype, NULL, "datatype", NULL},
+    {NULL}  /* Sentinel */
+};
+
+
+static PyTypeObject TypedLiteralType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "_hexastore.TypedLiteral",
+    .tp_doc = "TypedLiteral objects",
+    .tp_basicsize = sizeof(TypedLiteralObject),
+    .tp_itemsize = 0,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_new = TypedLiteral_new,
+    .tp_init = (initproc) TypedLiteral_init,
+    .tp_dealloc = (destructor) TypedLiteral_dealloc,
+    .tp_getset = TypedLiteral_getsetters,
+    .tp_repr = (reprfunc) TypedLiteral_repr,
+    .tp_str = (reprfunc) TypedLiteral_str,
+    .tp_richcompare = TypedLiteral_richcmp,
+    .tp_hash = (hashfunc) TypedLiteral_hash,
+};
+
 static PyModuleDef _hexastoremodule = {
     PyModuleDef_HEAD_INIT,
     .m_name = "_hexastore",
@@ -453,6 +635,9 @@ PyInit__hexastore(void)
         return NULL;
 
     if (PyType_Ready(&LangTaggedStringType) < 0)
+        return NULL;
+
+    if (PyType_Ready(&TypedLiteralType) < 0)
         return NULL;
 
     m = PyModule_Create(&_hexastoremodule);
@@ -476,6 +661,16 @@ PyInit__hexastore(void)
 
     Py_INCREF(&LangTaggedStringType);
     if (PyModule_AddObject(m, "LangTaggedString", (PyObject *) &LangTaggedStringType) < 0) {
+        Py_DECREF(&LangTaggedStringType);
+        Py_DECREF(&BlankNodeType);
+        Py_DECREF(&IRIType);
+        Py_DECREF(m);
+        return NULL;
+    }
+
+    Py_INCREF(&TypedLiteralType);
+    if (PyModule_AddObject(m, "TypedLiteral", (PyObject *) &TypedLiteralType) < 0) {
+        Py_DECREF(&TypedLiteralType);
         Py_DECREF(&LangTaggedStringType);
         Py_DECREF(&BlankNodeType);
         Py_DECREF(&IRIType);
