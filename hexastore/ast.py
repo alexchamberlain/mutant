@@ -5,45 +5,7 @@ from typing import List, Optional
 
 import attr
 
-from _hexastore import IRI
-
-
-@functools.total_ordering
-class BlankNode:
-    def __init__(self, id, factory):
-        self._id = id
-        self._factory = factory
-
-    @property
-    def id(self):
-        return self._id
-
-    @property
-    def factory(self):
-        return self._factory
-
-    def __hash__(self) -> int:
-        return hash(self._id)
-
-    def __eq__(self, other) -> bool:
-        if not isinstance(other, BlankNode):
-            return NotImplemented
-
-        return self._factory is other._factory and self._id == other._id
-
-    def __str__(self) -> str:
-        return f"{self._factory}({self._id})"
-
-    def __lt__(self, other: object) -> bool:
-        if isinstance(other, BlankNode):
-            if self._factory is not other._factory:
-                return NotImplemented
-            return self._id < other._id
-
-        return NotImplemented
-
-    def __repr__(self):
-        return f"BlankNode({str(self)})"
+from _hexastore import IRI, BlankNode
 
 
 @functools.total_ordering

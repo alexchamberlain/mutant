@@ -1,6 +1,8 @@
+from unittest import mock
+
 import pytest
 
-from _hexastore import IRI
+from _hexastore import IRI, BlankNode
 
 
 @pytest.mark.extension
@@ -31,3 +33,20 @@ def test_IRI_mutation():
 
     with pytest.raises(AttributeError):
         TITLE.value = "http://xmlns.com/foaf/0.1/title2"
+
+
+@pytest.mark.ast
+def test_BlankNode():
+    factory1 = mock.sentinel.factory1
+    factory2 = mock.sentinel.factory2
+
+    node1 = BlankNode(1, factory1)
+    node2 = BlankNode(2, factory1)
+    node3 = BlankNode(1, factory2)
+
+    assert node1 != node2
+    assert node1 != node3
+
+    assert str(node1)
+    assert repr(node1)
+    assert hash(node1)
