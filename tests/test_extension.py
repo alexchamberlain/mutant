@@ -2,7 +2,7 @@ from unittest import mock
 
 import pytest
 
-from _hexastore import IRI, BlankNode, LangTaggedString, TypedLiteral, Variable
+from _hexastore import IRI, BlankNode, LangTaggedString, TypedLiteral, Variable, Key
 
 
 @pytest.mark.extension
@@ -109,3 +109,56 @@ def test_Variable():
     assert hash(TITLE)
 
     assert TITLE.value == "a"
+
+
+@pytest.mark.extension
+def test_Key():
+    A = IRI("http://example.com/A")
+    B = IRI("http://example.com/B")
+
+    keyA = Key(A)
+    keyAp = Key(A)
+    keyB = Key(B)
+    key42 = Key(42)
+
+    assert keyA == keyA
+    assert keyA == keyAp
+    assert keyA != keyB
+
+    assert not (keyA == key42)
+    assert keyA != key42
+
+    assert keyA < key42
+    assert keyA <= key42
+    assert not (keyA > key42)
+    assert not (keyA >= key42)
+
+
+@pytest.mark.extension
+def test_Key_tuple():
+    A = IRI("http://example.com/A")
+    B = IRI("http://example.com/B")
+    C = IRI("http://example.com/C")
+    D = IRI("http://example.com/D")
+
+    key1 = (A, B, C)
+    key2 = (A, B, C)
+    key3 = (A, B, D)
+
+    assert key1 == key1
+
+    assert key1 == key2
+    assert not (key1 != key2)
+
+    assert not (key1 < key2)
+    assert key1 <= key2
+    assert not (key1 > key2)
+    assert key1 >= key2
+
+    assert not (key1 == key3)
+    assert key1 != key3
+
+    assert key1 < key3
+    assert key1 <= key3
+    assert not (key1 > key3)
+    assert not (key1 >= key3)

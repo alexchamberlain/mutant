@@ -1,6 +1,5 @@
 import decimal
 import enum
-import functools
 from typing import List, Optional
 
 import attr

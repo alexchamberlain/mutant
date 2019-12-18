@@ -128,7 +128,7 @@ static PyTypeObject IRIType = {
     .tp_doc = "IRI objects",
     .tp_basicsize = sizeof(IRIObject),
     .tp_itemsize = 0,
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_new = IRI_new,
     .tp_init = (initproc) IRI_init,
     .tp_dealloc = (destructor) IRI_dealloc,
@@ -264,7 +264,7 @@ static PyTypeObject BlankNodeType = {
     .tp_doc = "BlankNode objects",
     .tp_basicsize = sizeof(IRIObject),
     .tp_itemsize = 0,
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_new = BlankNode_new,
     .tp_init = (initproc) BlankNode_init,
     .tp_dealloc = (destructor) BlankNode_dealloc,
@@ -424,7 +424,7 @@ static PyTypeObject LangTaggedStringType = {
     .tp_doc = "LangTaggedString objects",
     .tp_basicsize = sizeof(LangTaggedStringObject),
     .tp_itemsize = 0,
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_new = LangTaggedString_new,
     .tp_init = (initproc) LangTaggedString_init,
     .tp_dealloc = (destructor) LangTaggedString_dealloc,
@@ -606,7 +606,7 @@ static PyTypeObject TypedLiteralType = {
     .tp_doc = "TypedLiteral objects",
     .tp_basicsize = sizeof(TypedLiteralObject),
     .tp_itemsize = 0,
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_new = TypedLiteral_new,
     .tp_init = (initproc) TypedLiteral_init,
     .tp_dealloc = (destructor) TypedLiteral_dealloc,
@@ -745,7 +745,7 @@ static PyTypeObject VariableType = {
     .tp_doc = "Variable objects",
     .tp_basicsize = sizeof(VariableObject),
     .tp_itemsize = 0,
-    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_new = Variable_new,
     .tp_init = (initproc) Variable_init,
     .tp_dealloc = (destructor) Variable_dealloc,
@@ -757,6 +757,232 @@ static PyTypeObject VariableType = {
     .tp_hash = (hashfunc) Variable_hash,
 };
 
+
+typedef struct {
+    PyObject_HEAD
+    PyObject* value;
+} KeyObject;
+
+static PyTypeObject KeyType;
+static PyObject *KeyTypeOrder;
+
+static void
+Key_dealloc(KeyObject *self)
+{
+    Py_XDECREF(self->value);
+    Py_TYPE(self)->tp_free((PyObject *) self);
+}
+
+
+static int
+Key_init(KeyObject *self, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"value", NULL};
+    PyObject *value = NULL, *tmp;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &value))
+        return -1;
+
+    if (value) {
+        PyObject* type = Py_TYPE(value);
+        PyObject* entry = PyDict_GetItem(KeyTypeOrder, type);
+
+        if(entry == NULL)
+        {
+            PyErr_SetString(
+                PyExc_TypeError,
+                "argument 1 must be a valid RDF term"
+            );
+            return -1;
+        }
+
+        tmp = self->value;
+        Py_INCREF(value);
+        self->value = value;
+        Py_XDECREF(tmp);
+    }
+
+    return 0;
+}
+
+static PyObject *
+Key_repr(KeyObject * obj)
+{
+    return PyUnicode_FromFormat(
+        "Key(value=%R)",
+        obj->value
+    );
+}
+
+
+static PyObject *
+Key_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
+{
+    if(!PyObject_TypeCheck(lhs_o, &KeyType) || !PyObject_TypeCheck(rhs_o, &KeyType))
+    {
+        PyObject *result = Py_NotImplemented;
+        Py_INCREF(result);
+        return result;
+    }
+
+    KeyObject *lhs = lhs_o;
+    KeyObject *rhs = rhs_o;
+
+    PyObject *lhs_value = lhs->value;
+    PyObject *rhs_value = rhs->value;
+
+    if(lhs_value == rhs_value)
+    {
+        switch (op) {
+            case Py_LT:
+            case Py_NE:
+            case Py_GT:
+                Py_INCREF(Py_False);
+                return Py_False;
+            case Py_LE:
+            case Py_EQ:
+            case Py_GE:
+                Py_INCREF(Py_True);
+                return Py_True;
+            default:
+                Py_UNREACHABLE();
+        }
+    }
+
+    if (lhs_value == NULL) {
+        // TODO: What is the right exception type here?
+        PyErr_SetString(PyExc_AttributeError, "lhs->value is NULL");
+        return NULL;
+    }
+
+    if (rhs_value == NULL) {
+        PyErr_SetString(PyExc_AttributeError, "rhs->value is NULL");
+        return NULL;
+    }
+
+    PyTypeObject *lhs_type = Py_TYPE(lhs_value);
+    PyTypeObject *rhs_type = Py_TYPE(rhs_value);
+
+    if(lhs_type != rhs_type)
+    {
+        switch (op) {
+            case Py_NE:
+                Py_INCREF(Py_True);
+                return Py_True;
+            case Py_EQ:
+                Py_INCREF(Py_False);
+                return Py_False;
+        }
+
+        PyObject* lhs_entry = PyDict_GetItem(KeyTypeOrder, lhs_type);
+        PyObject* rhs_entry = PyDict_GetItem(KeyTypeOrder, rhs_type);
+
+        if (lhs_entry == NULL) {
+            PyErr_SetString(PyExc_AttributeError, "lhs_entry is NULL");
+            return NULL;
+        }
+
+        if (rhs_entry == NULL) {
+            PyErr_SetString(PyExc_AttributeError, "rhs_entry is NULL");
+            return NULL;
+        }
+
+        // TODO: Handle interspersing TypedLiteral among other types.
+        long lhs_order = PyLong_AsLong(lhs_entry);
+        long rhs_order = PyLong_AsLong(rhs_entry);
+
+        int r;
+
+        switch (op) {
+            case Py_LT:
+            case Py_LE:
+                r = lhs_order < rhs_order;
+                break;
+            case Py_GT:
+            case Py_GE:
+                r = lhs_order > rhs_order;
+                break;
+        }
+
+        PyObject *result = r ? Py_True : Py_False;
+        Py_INCREF(result);
+        return result;
+    }
+
+    if(lhs_type == &PyTuple_Type)
+    {
+        if(PyTuple_Size(lhs_value) != 3 || PyTuple_Size(rhs_value) != 3)
+        {
+            PyObject *result = Py_NotImplemented;
+            Py_INCREF(result);
+            return result;
+        }
+
+        for(size_t i = 0; i < 3; ++i)
+        {
+            PyObject *lhs_item = PyTuple_GET_ITEM(lhs_value, i);
+            PyObject *rhs_item = PyTuple_GET_ITEM(rhs_value, i);
+
+            int r = PyObject_RichCompareBool(lhs_item, rhs_item, Py_EQ);
+
+            switch(r) {
+                case 1:
+                    continue;
+                case 0:
+                    return PyObject_RichCompare(lhs_item, rhs_item, op);
+                default:
+                    return NULL;
+            }
+        }
+
+        switch (op) {
+            case Py_LT:
+            case Py_NE:
+            case Py_GT:
+                Py_INCREF(Py_False);
+                return Py_False;
+            case Py_LE:
+            case Py_EQ:
+            case Py_GE:
+                Py_INCREF(Py_True);
+                return Py_True;
+            default:
+                Py_UNREACHABLE();
+        }
+    }
+
+    return PyObject_RichCompare(lhs->value, rhs->value, op);
+}
+
+
+static PyObject *
+Key_value(KeyObject *self, void *closure)
+{
+    Py_INCREF(self->value);
+    return self->value;
+}
+
+
+static PyGetSetDef Key_getsetters[] = {
+    {"value", (getter) Key_value, NULL, "value", NULL},
+    {NULL}  /* Sentinel */
+};
+
+
+static PyTypeObject KeyType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "_hexastore.Key",
+    .tp_doc = "Key objects",
+    .tp_basicsize = sizeof(KeyObject),
+    .tp_itemsize = 0,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = PyType_GenericNew,
+    .tp_init = (initproc) Key_init,
+    .tp_dealloc = (destructor) Key_dealloc,
+    .tp_getset = Key_getsetters,
+    .tp_repr = (reprfunc) Key_repr,
+    .tp_richcompare = Key_richcmp,
+};
 
 static PyModuleDef _hexastoremodule = {
     PyModuleDef_HEAD_INIT,
@@ -783,6 +1009,34 @@ PyInit__hexastore(void)
 
     if (PyType_Ready(&VariableType) < 0)
         return NULL;
+
+    if (PyType_Ready(&KeyType) < 0)
+        return NULL;
+
+    PyObject* decimal = PyImport_ImportModuleNoBlock("decimal");
+    if (decimal == NULL){
+        return NULL;
+    }
+    PyObject* DecimalType = PyObject_GetAttrString(decimal, "Decimal");
+    Py_DECREF(decimal);
+
+    KeyTypeOrder = PyDict_New();
+
+    if(KeyTypeOrder == NULL) {
+        return NULL;
+    }
+
+    PyDict_SetItem(KeyTypeOrder, (PyObject*) Py_TYPE(Py_None), PyLong_FromLong(0));
+    PyDict_SetItem(KeyTypeOrder, (PyObject*) &PyTuple_Type, PyLong_FromLong(1));
+    PyDict_SetItem(KeyTypeOrder, (PyObject*) &BlankNodeType, PyLong_FromLong(2));
+    PyDict_SetItem(KeyTypeOrder, (PyObject*) &IRIType, PyLong_FromLong(3));
+    PyDict_SetItem(KeyTypeOrder, (PyObject*) &PyUnicode_Type, PyLong_FromLong(4));
+    PyDict_SetItem(KeyTypeOrder, (PyObject*) &LangTaggedStringType, PyLong_FromLong(5));
+    PyDict_SetItem(KeyTypeOrder, (PyObject*) &PyLong_Type, PyLong_FromLong(6));
+    PyDict_SetItem(KeyTypeOrder, (PyObject*) DecimalType, PyLong_FromLong(7));
+    PyDict_SetItem(KeyTypeOrder, (PyObject*) &PyFloat_Type, PyLong_FromLong(8));
+    PyDict_SetItem(KeyTypeOrder, (PyObject*) &TypedLiteralType, PyLong_FromLong(9));
+    PyDict_SetItem(KeyTypeOrder, (PyObject*) &VariableType, PyLong_FromLong(10));
 
     m = PyModule_Create(&_hexastoremodule);
     if (m == NULL)
@@ -824,6 +1078,18 @@ PyInit__hexastore(void)
 
     Py_INCREF(&VariableType);
     if (PyModule_AddObject(m, "Variable", (PyObject *) &VariableType) < 0) {
+        Py_DECREF(&VariableType);
+        Py_DECREF(&TypedLiteralType);
+        Py_DECREF(&LangTaggedStringType);
+        Py_DECREF(&BlankNodeType);
+        Py_DECREF(&IRIType);
+        Py_DECREF(m);
+        return NULL;
+    }
+
+    Py_INCREF(&KeyType);
+    if (PyModule_AddObject(m, "Key", (PyObject *) &KeyType) < 0) {
+        Py_DECREF(&KeyType);
         Py_DECREF(&VariableType);
         Py_DECREF(&TypedLiteralType);
         Py_DECREF(&LangTaggedStringType);
