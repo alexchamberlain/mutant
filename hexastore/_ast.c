@@ -2,6 +2,10 @@
 #include <Python.h>
 #include <structmember.h>
 
+#if PY_VERSION_HEX < 0x03070000
+    #define Py_UNREACHABLE() \
+        Py_FatalError("Unreachable C code path reached")
+#endif
 
 typedef struct {
     PyObject_HEAD
