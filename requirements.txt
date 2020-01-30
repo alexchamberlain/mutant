@@ -4,7 +4,7 @@ cffi==1.13.2
 Click==7.0
 dataclasses==0.6; python_version < '3.7'
 greenlet==0.4.13
-hypothesis==4.55.2
+hypothesis==5.4.0
 immutables==0.11
 lark-parser==0.7.8
 more-itertools==8.0.2
