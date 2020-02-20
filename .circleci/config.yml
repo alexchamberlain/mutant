@@ -32,7 +32,7 @@ jobs:
   test-3.8:
     <<: *test-template
     docker:
-        - image: python:3.8.0rc1
+        - image: python:3.8
   test-pypy3.6:
     <<: *test-template
     docker:
