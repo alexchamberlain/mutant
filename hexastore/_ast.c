@@ -90,14 +90,14 @@ IRI_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
         return result;
     }
 
-    IRIObject *lhs = lhs_o;
-    IRIObject *rhs = rhs_o;
+    IRIObject *lhs = (IRIObject *) lhs_o;
+    IRIObject *rhs = (IRIObject *) rhs_o;
 
     return PyObject_RichCompare(lhs->value, rhs->value, op);
 }
 
 
-static Py_hash_t *
+static Py_hash_t
 IRI_hash(IRIObject *o)
 {
     return PyObject_Hash(o->value);
@@ -227,8 +227,8 @@ BlankNode_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
         return result;
     }
 
-    BlankNodeObject *lhs = lhs_o;
-    BlankNodeObject *rhs = rhs_o;
+    BlankNodeObject *lhs = (BlankNodeObject *) lhs_o;
+    BlankNodeObject *rhs = (BlankNodeObject *) rhs_o;
 
     if(lhs->factory != rhs->factory)
     {
@@ -252,7 +252,7 @@ BlankNode_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
 }
 
 
-static Py_hash_t *
+static Py_hash_t
 BlankNode_hash(BlankNodeObject *o)
 {
     PyObject *id_o = PyLong_FromUnsignedLong(o->id);
@@ -266,7 +266,7 @@ static PyTypeObject BlankNodeType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "_hexastore.BlankNode",
     .tp_doc = "BlankNode objects",
-    .tp_basicsize = sizeof(IRIObject),
+    .tp_basicsize = sizeof(BlankNodeObject),
     .tp_itemsize = 0,
     .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_new = BlankNode_new,
@@ -376,8 +376,8 @@ LangTaggedString_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
         return result;
     }
 
-    LangTaggedStringObject *lhs = lhs_o;
-    LangTaggedStringObject *rhs = rhs_o;
+    LangTaggedStringObject *lhs = (LangTaggedStringObject *) lhs_o;
+    LangTaggedStringObject *rhs = (LangTaggedStringObject *) rhs_o;
 
     int r = PyObject_RichCompareBool(lhs->value, rhs->value, Py_EQ);
 
@@ -392,7 +392,7 @@ LangTaggedString_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
 }
 
 
-static Py_hash_t *
+static Py_hash_t
 LangTaggedString_hash(LangTaggedStringObject *o)
 {
     // TODO: I have no idea if this is any good
@@ -558,8 +558,8 @@ TypedLiteral_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
         return result;
     }
 
-    TypedLiteralObject *lhs = lhs_o;
-    TypedLiteralObject *rhs = rhs_o;
+    TypedLiteralObject *lhs = (TypedLiteralObject *) lhs_o;
+    TypedLiteralObject *rhs = (TypedLiteralObject *) rhs_o;
 
     int r = PyObject_RichCompareBool(lhs->value, rhs->value, Py_EQ);
 
@@ -574,7 +574,7 @@ TypedLiteral_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
 }
 
 
-static Py_hash_t *
+static Py_hash_t
 TypedLiteral_hash(TypedLiteralObject *o)
 {
     // TODO: I have no idea if this is any good
@@ -707,14 +707,14 @@ Variable_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
         return result;
     }
 
-    VariableObject *lhs = lhs_o;
-    VariableObject *rhs = rhs_o;
+    VariableObject *lhs = (VariableObject *) lhs_o;
+    VariableObject *rhs = (VariableObject *) rhs_o;
 
     return PyObject_RichCompare(lhs->value, rhs->value, op);
 }
 
 
-static Py_hash_t *
+static Py_hash_t
 Variable_hash(VariableObject *o)
 {
     return PyObject_Hash(o->value);
@@ -788,7 +788,7 @@ Key_init(KeyObject *self, PyObject *args, PyObject *kwds)
         return -1;
 
     if (value) {
-        PyObject* type = Py_TYPE(value);
+        PyObject* type = (PyObject*) Py_TYPE(value);
         PyObject* entry = PyDict_GetItem(KeyTypeOrder, type);
 
         if(entry == NULL)
@@ -829,8 +829,8 @@ Key_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
         return result;
     }
 
-    KeyObject *lhs = lhs_o;
-    KeyObject *rhs = rhs_o;
+    KeyObject *lhs = (KeyObject *) lhs_o;
+    KeyObject *rhs = (KeyObject *) rhs_o;
 
     PyObject *lhs_value = lhs->value;
     PyObject *rhs_value = rhs->value;
@@ -878,8 +878,8 @@ Key_richcmp(PyObject *lhs_o, PyObject *rhs_o, int op)
                 return Py_False;
         }
 
-        PyObject* lhs_entry = PyDict_GetItem(KeyTypeOrder, lhs_type);
-        PyObject* rhs_entry = PyDict_GetItem(KeyTypeOrder, rhs_type);
+        PyObject* lhs_entry = PyDict_GetItem(KeyTypeOrder, (PyObject*) lhs_type);
+        PyObject* rhs_entry = PyDict_GetItem(KeyTypeOrder, (PyObject*) rhs_type);
 
         if (lhs_entry == NULL) {
             PyErr_SetString(PyExc_AttributeError, "lhs_entry is NULL");
