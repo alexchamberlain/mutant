@@ -6,7 +6,7 @@ dataclasses==0.6; python_version < '3.7'
 greenlet==0.4.13
 hypothesis==5.6.0
 immutables==0.11
-lark-parser==0.8.1
+lark-parser==0.8.2
 more-itertools==8.2.0
 msgpack==1.0.0
 pluggy==0.13.1
