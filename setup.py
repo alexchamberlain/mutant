@@ -1,9 +1,9 @@
-import setuptools
+from setuptools import setup, Extension
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-setuptools.setup(
+setup(
     name="mutant",
     version="0.0.1",
     author="Alex Chamberlain",
@@ -20,4 +20,6 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    ext_modules=[Extension("_hexastore", ["hexastore/_ast.c"])],
+    install_requires=["lark-parser"],
 )
