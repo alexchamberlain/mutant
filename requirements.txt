@@ -5,7 +5,7 @@ Click==7.1.1
 dataclasses==0.6; python_version < '3.7'
 greenlet==0.4.13
 hypothesis==5.8.0
-immutables==0.11
+immutables==0.15
 lark-parser==0.8.5
 more-itertools==8.2.0
 msgpack==1.0.0
